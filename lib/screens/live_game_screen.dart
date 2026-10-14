@@ -651,8 +651,8 @@ class _State extends State<LiveGameScreen> {
     });
   }
 
-  /// (7)(9) Cancha: números negros en negritas, círculos más separados
-  /// y posiciones que se espejean al cambiar de lado.
+  /// Cancha naranja con líneas blancas, red negra y línea de ataque
+  /// a 1/3 de la red hacia la zona zaguera (separa delanteros/zagueros).
   Widget _cancha() {
     Widget celda(String id, bool conSaque) {
       final num = _numeroJug(id)?.toString() ?? '?';
@@ -661,8 +661,8 @@ class _State extends State<LiveGameScreen> {
         height: 72,
         margin: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: conSaque ? Colors.yellow : Colors.blue.shade50,
-          border: Border.all(color: Colors.blueGrey, width: 2),
+          color: conSaque ? Colors.yellow : Colors.white,
+          border: Border.all(color: Colors.black, width: 2),
           borderRadius: BorderRadius.circular(36),
         ),
         child: Center(
@@ -679,58 +679,71 @@ class _State extends State<LiveGameScreen> {
     String sacaDe(String teamId) =>
         saca == teamId ? posDe(teamId)[0] : '';
 
-    // Lado izquierdo: zaguero | ataque (frente a la red a la derecha)
-    Widget equipoIzq(String teamId) {
-      final pos = posDe(teamId);
+    Widget colAtras(String teamId, List<String> ids) {
       final s = sacaDe(teamId);
       return Column(
-        children: [
-          Text(_nombre(teamId),
-              style:
-                  const TextStyle(fontWeight: FontWeight.bold)),
-          Row(children: [
-            Column(children: [
-              celda(pos[4], pos[4] == s),
-              celda(pos[5], pos[5] == s),
-              celda(pos[0], pos[0] == s),
+          children: ids.map((p) => celda(p, p == s)).toList());
+    }
+
+    Widget colDelante(String teamId, List<String> ids) {
+      final s = sacaDe(teamId);
+      return Column(
+          children: ids.map((p) => celda(p, p == s)).toList());
+    }
+
+    // Línea blanca de ataque (3 m): separa delanteros de zagueros.
+    Widget lineaAtaque() => Container(
+        width: 4, height: 300, color: Colors.white);
+
+    // Mitad izquierda: [zaguero |línea| ataque] pegado a la red derecha.
+    Widget mitadIzq(String teamId) {
+      final pos = posDe(teamId);
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.orange.shade700,
+          border: Border.all(color: Colors.white, width: 3),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+        child: Column(
+          children: [
+            Text(_nombre(teamId),
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold, color: Colors.white)),
+            Row(children: [
+              colAtras(teamId, [pos[4], pos[5], pos[0]]),
+              lineaAtaque(),
+              colDelante(teamId, [pos[3], pos[2], pos[1]]),
             ]),
-            Column(children: [
-              celda(pos[3], pos[3] == s),
-              celda(pos[2], pos[2] == s),
-              celda(pos[1], pos[1] == s),
-            ]),
-          ]),
-          const Text('5-4 / 6-3 / 1-2',
-              style: TextStyle(fontSize: 10)),
-        ],
+            const Text('ZAGUERO | ATAQUE',
+                style: TextStyle(fontSize: 10, color: Colors.white)),
+          ],
+        ),
       );
     }
 
-    // (9) Lado derecho espejeado: ataque | zaguero.
-    // El pos 1 pasa de inferior-izquierda a superior-derecha.
-    Widget equipoDer(String teamId) {
+    // Mitad derecha espejeada: [ataque |línea| zaguero] pegada a la red.
+    Widget mitadDer(String teamId) {
       final pos = posDe(teamId);
-      final s = sacaDe(teamId);
-      return Column(
-        children: [
-          Text(_nombre(teamId),
-              style:
-                  const TextStyle(fontWeight: FontWeight.bold)),
-          Row(children: [
-            Column(children: [
-              celda(pos[1], pos[1] == s),
-              celda(pos[2], pos[2] == s),
-              celda(pos[3], pos[3] == s),
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.orange.shade700,
+          border: Border.all(color: Colors.white, width: 3),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+        child: Column(
+          children: [
+            Text(_nombre(teamId),
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold, color: Colors.white)),
+            Row(children: [
+              colDelante(teamId, [pos[1], pos[2], pos[3]]),
+              lineaAtaque(),
+              colAtras(teamId, [pos[0], pos[5], pos[4]]),
             ]),
-            Column(children: [
-              celda(pos[0], pos[0] == s),
-              celda(pos[5], pos[5] == s),
-              celda(pos[4], pos[4] == s),
-            ]),
-          ]),
-          const Text('2-1 / 3-6 / 4-5',
-              style: TextStyle(fontSize: 10)),
-        ],
+            const Text('ATAQUE | ZAGUERO',
+                style: TextStyle(fontSize: 10, color: Colors.white)),
+          ],
+        ),
       );
     }
 
@@ -739,24 +752,24 @@ class _State extends State<LiveGameScreen> {
     final idDer = izqEsA ? widget.ladoBId : widget.ladoAId;
 
     return Card(
-      color: Colors.green.shade50,
+      color: Colors.orange.shade900,
       child: Padding(
         padding: const EdgeInsets.all(8),
         child: Column(
           children: [
             const Text(
                 'ZAGUERO • ATAQUE • RED • ATAQUE • ZAGUERO',
-                style: TextStyle(fontSize: 11)),
+                style: TextStyle(fontSize: 11, color: Colors.white)),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  equipoIzq(idIzq),
+                  mitadIzq(idIzq),
                   Container(
-                      width: 8,
-                      height: 300,
-                      color: Colors.red,
+                      width: 10,
+                      height: 340,
+                      color: Colors.black,
                       child: const Center(
                           child: RotatedBox(
                               quarterTurns: 1,
@@ -765,13 +778,13 @@ class _State extends State<LiveGameScreen> {
                                       color: Colors.white,
                                       fontWeight:
                                           FontWeight.bold))))),
-                  equipoDer(idDer),
+                  mitadDer(idDer),
                 ],
               ),
             ),
             const Text(
                 'Rotación en manecillas del reloj • ● amarillo = saque',
-                style: TextStyle(fontSize: 11)),
+                style: TextStyle(fontSize: 11, color: Colors.white)),
           ],
         ),
       ),
