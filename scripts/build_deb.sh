@@ -28,7 +28,7 @@ EOF
 # Lanzador
 cat > deb_pkg/usr/share/applications/$APP.desktop <<EOF
 [Desktop Entry]
-Name=Torneo Voleibol
+Name=Voleyball Tournament Control
 Comment=Control de torneo de voleibol
 Exec=/opt/$APP/$APP
 Icon=$APP

@@ -1,6 +1,6 @@
 {
-    "name": "torneo_voleibol",
-    "short_name": "torneo_voleibol",
+    "name": "Voleyball Tournament Control",
+    "short_name": "Voleyball TC",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
