@@ -762,7 +762,7 @@ class _State extends State<LiveGameScreen> {
     Widget lineaAtaque() => Container(
         width: 4, height: 300, color: Colors.white);
 
-    // Mitad izquierda: [zaguero |línea| ataque] pegado a la red derecha.
+    // Mitad izquierda: zaguero al doble de ancho que el ataque (2/3-1/3).
     Widget mitadIzq(String teamId) {
       final pos = posDe(teamId);
       return Container(
@@ -777,18 +777,24 @@ class _State extends State<LiveGameScreen> {
                 style: const TextStyle(
                     fontWeight: FontWeight.bold, color: Colors.white)),
             Row(children: [
-              colAtras(teamId, [pos[4], pos[5], pos[0]]),
+              SizedBox(
+                  width: 220,
+                  child: Center(
+                      child:
+                          colAtras(teamId, [pos[4], pos[5], pos[0]]))),
               lineaAtaque(),
-              colDelante(teamId, [pos[3], pos[2], pos[1]]),
+              SizedBox(
+                  width: 110,
+                  child: Center(
+                      child:
+                          colDelante(teamId, [pos[3], pos[2], pos[1]]))),
             ]),
-            const Text('ZAGUERO | ATAQUE',
-                style: TextStyle(fontSize: 10, color: Colors.white)),
           ],
         ),
       );
     }
 
-    // Mitad derecha espejeada: [ataque |línea| zaguero] pegada a la red.
+    // Mitad derecha espejeada: ataque (1/3) |línea| zaguero (2/3).
     Widget mitadDer(String teamId) {
       final pos = posDe(teamId);
       return Container(
@@ -803,12 +809,18 @@ class _State extends State<LiveGameScreen> {
                 style: const TextStyle(
                     fontWeight: FontWeight.bold, color: Colors.white)),
             Row(children: [
-              colDelante(teamId, [pos[1], pos[2], pos[3]]),
+              SizedBox(
+                  width: 110,
+                  child: Center(
+                      child:
+                          colDelante(teamId, [pos[1], pos[2], pos[3]]))),
               lineaAtaque(),
-              colAtras(teamId, [pos[0], pos[5], pos[4]]),
+              SizedBox(
+                  width: 220,
+                  child: Center(
+                      child:
+                          colAtras(teamId, [pos[0], pos[5], pos[4]]))),
             ]),
-            const Text('ATAQUE | ZAGUERO',
-                style: TextStyle(fontSize: 10, color: Colors.white)),
           ],
         ),
       );
@@ -819,40 +831,18 @@ class _State extends State<LiveGameScreen> {
     final idDer = izqEsA ? widget.ladoBId : widget.ladoAId;
 
     return Card(
-      color: Colors.orange.shade900,
       child: Padding(
         padding: const EdgeInsets.all(8),
-        child: Column(
-          children: [
-            const Text(
-                'ZAGUERO • ATAQUE • RED • ATAQUE • ZAGUERO',
-                style: TextStyle(fontSize: 11, color: Colors.white)),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  mitadIzq(idIzq),
-                  Container(
-                      width: 10,
-                      height: 340,
-                      color: Colors.black,
-                      child: const Center(
-                          child: RotatedBox(
-                              quarterTurns: 1,
-                              child: Text('RED',
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight:
-                                          FontWeight.bold))))),
-                  mitadDer(idDer),
-                ],
-              ),
-            ),
-            const Text(
-                'Rotación en manecillas del reloj • ● amarillo = saque',
-                style: TextStyle(fontSize: 11, color: Colors.white)),
-          ],
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              mitadIzq(idIzq),
+              Container(width: 10, height: 340, color: Colors.black),
+              mitadDer(idDer),
+            ],
+          ),
         ),
       ),
     );
