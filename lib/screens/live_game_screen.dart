@@ -5,6 +5,7 @@ import '../store.dart';
 import '../rules.dart';
 import 'side_serve_screen.dart';
 import 'lineup_screen.dart';
+import 'jornada_screen.dart';
 
 class _Acc {
   int setsFA = 0;
@@ -126,6 +127,12 @@ class _State extends State<LiveGameScreen> {
     subB = ControlSustituciones();
     titA = posA.toSet();
     titB = posB.toSet();
+    if (widget.setNumero == 1) {
+      // Inicio desde cero (roster): descarta acumulados/pausa viejos
+      // del mismo partido para no arrastrar otro encuentro.
+      LiveGameScreen.sesiones[_key] = _Acc();
+      context.read<AppStore>().borrarPausa(widget.torneoId, widget.matchId);
+    }
     // registrar jugadores que participan
     final fixA = _fixture().equipoAId;
     for (final id in [...posA, ..._bancaIds(true)]) {
@@ -434,7 +441,8 @@ class _State extends State<LiveGameScreen> {
     return ids;
   }
 
-  /// (4) Suspender: guarda el punto exacto para "Continuar encuentro".
+  /// (4) Suspender: guarda el punto exacto en el sistema y vuelve
+  /// directamente a la pantalla Jornada actual.
   Future<void> _suspender() async {
     final store = context.read<AppStore>();
     final fix = _fixture();
@@ -471,14 +479,20 @@ class _State extends State<LiveGameScreen> {
       titA: titA.toList(),
       titB: titB.toList(),
     );
+    // Guardado directo en el sistema (persistente).
     await store.guardarPausa(pausa);
     fix.programado = true;
     await store.persistir();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(
-            'Encuentro suspendido en set ${widget.setNumero} ($pA-$pB). Usa "Continuar encuentro".')));
-    Navigator.pop(context);
+            'Partido guardado en set ${widget.setNumero} ($pA-$pB). Usa "Continuar encuentro" en Jornada actual.')));
+    // Ir directo a Jornada actual, saliendo del flujo de pantallas.
+    Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+            builder: (_) => JornadaScreen(torneoId: widget.torneoId)),
+        (r) => r.isFirst);
   }
 
   @override
