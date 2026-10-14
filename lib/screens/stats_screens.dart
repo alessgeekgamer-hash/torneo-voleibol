@@ -78,9 +78,16 @@ class StandingsScreen extends StatelessWidget {
           final s = pos[i];
           return ListTile(
             leading: CircleAvatar(child: Text('${i + 1}')),
-            title: Text(t.nombreEquipo(s.equipoId)),
+            title: Text(
+              t.nombreEquipo(s.equipoId),
+              style:
+                  const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
             subtitle: Text(
-                'PG:${s.pg} DifSets:${s.difSets} DifPts:${s.difPuntos} SF:${s.sf} SC:${s.sc} PF:${s.pf} PC:${s.pc}'),
+              'PG:${s.pg}  PP:${s.pp}  PJ:${s.pj}\nSets ${s.sf}-${s.sc} (Dif ${s.difSets})  •  Pts ${s.pf}-${s.pc} (Dif ${s.difPuntos})',
+              style: const TextStyle(fontSize: 12),
+            ),
+            isThreeLine: true,
           );
         },
       ),

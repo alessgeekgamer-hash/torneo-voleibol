@@ -149,8 +149,10 @@ class _State extends State<FixtureScreen> {
         : (m.programado
             ? 'En jornada actual'
             : 'Sin programar${m.fecha.isNotEmpty ? ' • ${m.fecha}' : ''}${m.lugar.isNotEmpty ? ' • ${m.lugar}' : ''}');
+    final tituloNegro = seleccionado || jugado;
     return Card(
-      // (2) seleccionado: recuadro blanco con letras negras
+      // (2) seleccionado: recuadro blanco con letras negras.
+      // Terminado: fondo verde claro con letras negras para que se lea.
       color: seleccionado
           ? Colors.white
           : (jugado ? Colors.green.shade100 : null),
@@ -164,11 +166,12 @@ class _State extends State<FixtureScreen> {
         title: Text(
             '${t.nombreEquipo(m.equipoAId)} vs ${t.nombreEquipo(m.equipoBId)}${m.etiqueta.isNotEmpty && m.etiqueta != 'Extra' ? ' (${m.etiqueta})' : ''}${baja ? ' (BAJA)' : ''}',
             style: TextStyle(
-                color: seleccionado ? Colors.black : null,
+                color: tituloNegro ? Colors.black : null,
                 fontWeight:
-                    seleccionado ? FontWeight.bold : FontWeight.normal)),
+                    tituloNegro ? FontWeight.bold : FontWeight.normal)),
         subtitle: Text(sub,
-            style: TextStyle(color: seleccionado ? Colors.black : null)),
+            style: TextStyle(
+                color: tituloNegro ? Colors.black : null)),
         trailing: Switch(
           value: m.programado && !jugado,
           activeThumbColor: Colors.green,

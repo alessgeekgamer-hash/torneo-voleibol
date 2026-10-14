@@ -108,6 +108,44 @@ Future<void> exportarHojaPartido(Tournament t, MatchResult r) async {
     totPB += ptsB(i);
   }
 
+  pw.Widget tablaEquipo({
+    required String nombre,
+    required List<int> tiempos,
+    required List<int> cambios,
+    required int Function(int) pts,
+    required int Function(int) ptsRival,
+    required int setsGanados,
+    required int totT,
+    required int totC,
+    required int totP,
+  }) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+      children: [
+        pw.Center(
+            child: pw.Text(nombre,
+                style: pw.TextStyle(
+                    fontSize: 14,
+                    fontWeight: pw.FontWeight.bold))),
+        pw.SizedBox(height: 4),
+        pw.TableHelper.fromTextArray(
+          headers: ['Set', 'Tiempos', 'Cambios', 'Ganó set', 'Puntos'],
+          data: [
+            for (var i = 0; i < numSets; i++)
+              [
+                'S${i + 1}',
+                '${at(i, tiempos)}',
+                '${at(i, cambios)}',
+                pts(i) > ptsRival(i) ? '1' : '0',
+                '${pts(i)}',
+              ],
+            ['TOT', '$totT', '$totC', '$setsGanados', '$totP'],
+          ],
+        ),
+      ],
+    );
+  }
+
   doc.addPage(pw.MultiPage(
     build: (c) => [
       pw.Center(
@@ -122,41 +160,34 @@ Future<void> exportarHojaPartido(Tournament t, MatchResult r) async {
       pw.Text(
           'Fecha: ${r.fecha.isEmpty ? '-' : r.fecha}   •   Lugar: ${r.lugar.isEmpty ? '-' : r.lugar}'),
       pw.SizedBox(height: 10),
-      pw.Text('Resumen por set',
+      pw.Text('Resumen por set (1 = ganó el set, 0 = lo perdió)',
           style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-      pw.TableHelper.fromTextArray(
-        headers: [
-          'Set',
-          'Tiempos $nomA',
-          'Cambios $nomA',
-          'Pts $nomA',
-          'Pts $nomB',
-          'Ganó set',
-          'Cambios $nomB',
-          'Tiempos $nomB',
-        ],
-        data: [
-          for (var i = 0; i < numSets; i++)
-            [
-              'Set ${i + 1}',
-              '${at(i, r.tiemposA)}',
-              '${at(i, r.cambiosA)}',
-              '${ptsA(i)}',
-              '${ptsB(i)}',
-              ptsA(i) > ptsB(i) ? nomA : nomB,
-              '${at(i, r.cambiosB)}',
-              '${at(i, r.tiemposB)}',
-            ],
-          [
-            'TOTAL',
-            '$totTA',
-            '$totCA',
-            '$totPA',
-            '$totPB',
-            '${r.setsA}-${r.setsB}',
-            '$totCB',
-            '$totTB',
-          ],
+      pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Expanded(
+              child: tablaEquipo(
+                  nombre: nomA,
+                  tiempos: r.tiemposA,
+                  cambios: r.cambiosA,
+                  pts: ptsA,
+                  ptsRival: ptsB,
+                  setsGanados: r.setsA,
+                  totT: totTA,
+                  totC: totCA,
+                  totP: totPA)),
+          pw.SizedBox(width: 8),
+          pw.Expanded(
+              child: tablaEquipo(
+                  nombre: nomB,
+                  tiempos: r.tiemposB,
+                  cambios: r.cambiosB,
+                  pts: ptsB,
+                  ptsRival: ptsA,
+                  setsGanados: r.setsB,
+                  totT: totTB,
+                  totC: totCB,
+                  totP: totPB)),
         ],
       ),
       pw.SizedBox(height: 10),
