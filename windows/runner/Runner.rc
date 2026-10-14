@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.voleibol.torneo" "\0"
-            VALUE "FileDescription", "Voleyball Tournament Control" "\0"
+            VALUE "FileDescription", "Volleyball Tournament Control" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "Voleyball Tournament Control" "\0"
+            VALUE "InternalName", "Volleyball Tournament Control" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.voleibol.torneo. All rights reserved." "\0"
             VALUE "OriginalFilename", "torneo_voleibol.exe" "\0"
-            VALUE "ProductName", "Voleyball Tournament Control" "\0"
+            VALUE "ProductName", "Volleyball Tournament Control" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

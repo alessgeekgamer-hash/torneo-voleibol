@@ -17,7 +17,7 @@ class App extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
     return MaterialApp(
-      title: 'Voleyball Tournament Control',
+      title: 'Volleyball Tournament Control',
       debugShowCheckedModeBanner: false,
       themeMode: store.oscuro ? ThemeMode.dark : ThemeMode.light,
       theme: voleyLight(),

@@ -16,7 +16,7 @@ class HomeScreen extends StatelessWidget {
       body: Column(
         children: [
           const VoleyHeader(
-            title: 'Voleyball\nTournament Control',
+            title: 'Volleyball\nTournament Control',
             subtitle: 'Rol • Jornada en vivo • Stats • PDF',
           ),
           Padding(
