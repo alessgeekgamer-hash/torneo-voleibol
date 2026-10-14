@@ -5,6 +5,8 @@ import '../store.dart';
 import 'live_game_screen.dart';
 
 /// Captura de posiciones iniciales 1-6. Arriba el equipo con saque.
+/// Si [pausa] viene informada, es reanudación: se captura la alineación
+/// para lo que resta del set (los cambios se reinician desde ahí).
 class LineupScreen extends StatefulWidget {
   final String torneoId;
   final String matchId;
@@ -14,6 +16,7 @@ class LineupScreen extends StatefulWidget {
   final int setNumero;
   final List<String>? prevA;
   final List<String>? prevB;
+  final PausaPartido? pausa;
   const LineupScreen(
       {super.key,
       required this.torneoId,
@@ -23,7 +26,8 @@ class LineupScreen extends StatefulWidget {
       required this.saqueId,
       required this.setNumero,
       this.prevA,
-      this.prevB});
+      this.prevB,
+      this.pausa});
 
   @override
   State<LineupScreen> createState() => _State();
@@ -48,10 +52,18 @@ class _State extends State<LineupScreen> {
     final eqAbajo = arribaEsA ? eqB : eqA;
 
     return Scaffold(
-      appBar: AppBar(title: Text('Alineación - Set ${widget.setNumero}')),
+      appBar: AppBar(title: Text(widget.pausa != null
+          ? 'Alineación para reanudar - Set ${widget.setNumero}'
+          : 'Alineación - Set ${widget.setNumero}')),
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: [
+          if (widget.pausa != null)
+            const Card(
+                child: Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Text(
+                        'Captura la alineación para lo que resta del set (pueden ser jugadoras diferentes). Los cambios se reinician desde esta alineación; el marcador y los sets se conservan.'))),
           Text(
               'Arriba: ${eqArriba.nombre} (saque) • Abajo: ${eqAbajo.nombre} (recibe)',
               style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -84,6 +96,17 @@ class _State extends State<LineupScreen> {
                 return;
               }
               // construir mapas id->player para live
+              if (widget.pausa != null) {
+                Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => LiveGameScreen.reanudar(
+                              pausa: widget.pausa!,
+                              lineupA: linA.cast<String>(),
+                              lineupB: linB.cast<String>(),
+                            )));
+                return;
+              }
               Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(

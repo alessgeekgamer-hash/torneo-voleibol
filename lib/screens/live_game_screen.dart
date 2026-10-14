@@ -33,6 +33,9 @@ class LiveGameScreen extends StatefulWidget {
   final List<String>? prevA;
   final List<String>? prevB;
   final PausaPartido? pausaInicial;
+  /// true cuando se reanuda con alineación editada: el marcador y los
+  /// sets se conservan pero los cambios se reinician desde [lineupA/B].
+  final bool reanudaConNuevaAlineacion;
   const LiveGameScreen(
       {super.key,
       required this.torneoId,
@@ -45,7 +48,8 @@ class LiveGameScreen extends StatefulWidget {
       required this.lineupB,
       this.prevA,
       this.prevB,
-      this.pausaInicial});
+      this.pausaInicial,
+      this.reanudaConNuevaAlineacion = false});
 
   factory LiveGameScreen.desdePausa({required PausaPartido pausa}) =>
       LiveGameScreen(
@@ -58,6 +62,24 @@ class LiveGameScreen extends StatefulWidget {
         lineupA: List<String>.from(pausa.posA),
         lineupB: List<String>.from(pausa.posB),
         pausaInicial: pausa,
+      );
+
+  /// Reanuda con alineación editada para lo que resta del set.
+  factory LiveGameScreen.reanudar(
+          {required PausaPartido pausa,
+          required List<String> lineupA,
+          required List<String> lineupB}) =>
+      LiveGameScreen(
+        torneoId: pausa.torneoId,
+        matchId: pausa.matchId,
+        ladoAId: pausa.ladoAId,
+        ladoBId: pausa.ladoBId,
+        saqueId: pausa.sacaId,
+        setNumero: pausa.setNumero,
+        lineupA: lineupA,
+        lineupB: lineupB,
+        pausaInicial: pausa,
+        reanudaConNuevaAlineacion: true,
       );
 
   static final Map<String, _Acc> sesiones = {};
@@ -89,19 +111,32 @@ class _State extends State<LiveGameScreen> {
     final pausa = widget.pausaInicial;
     if (pausa != null) {
       // (4) Restaurar encuentro suspendido tal cual se quedó.
-      posA = List<String>.from(pausa.posA);
-      posB = List<String>.from(pausa.posB);
+      final nuevaAlineacion = widget.reanudaConNuevaAlineacion;
+      posA = nuevaAlineacion
+          ? List<String>.from(widget.lineupA)
+          : List<String>.from(pausa.posA);
+      posB = nuevaAlineacion
+          ? List<String>.from(widget.lineupB)
+          : List<String>.from(pausa.posB);
       saca = pausa.sacaId;
       pA = pausa.pA;
       pB = pausa.pB;
       tA = pausa.tA;
       tB = pausa.tB;
-      subA = ControlSustituciones.desdeJson(pausa.subA);
-      subB = ControlSustituciones.desdeJson(pausa.subB);
-      titA = pausa.titA.toSet();
-      if (titA.isEmpty) titA = posA.toSet();
-      titB = pausa.titB.toSet();
-      if (titB.isEmpty) titB = posB.toSet();
+      if (nuevaAlineacion) {
+        // Los cambios comienzan desde la nueva alineación.
+        subA = ControlSustituciones();
+        subB = ControlSustituciones();
+        titA = posA.toSet();
+        titB = posB.toSet();
+      } else {
+        subA = ControlSustituciones.desdeJson(pausa.subA);
+        subB = ControlSustituciones.desdeJson(pausa.subB);
+        titA = pausa.titA.toSet();
+        if (titA.isEmpty) titA = posA.toSet();
+        titB = pausa.titB.toSet();
+        if (titB.isEmpty) titB = posB.toSet();
+      }
       ladoInvertido = pausa.ladoInvertido;
       cambioDefinitivoHecho = pausa.cambioHecho;
       final a = _Acc()
@@ -118,6 +153,24 @@ class _State extends State<LiveGameScreen> {
         ..cambiosFA = List<int>.from(pausa.accCambiosA)
         ..cambiosFB = List<int>.from(pausa.accCambiosB);
       LiveGameScreen.sesiones[_key] = a;
+      if (nuevaAlineacion) {
+        // Registrar a las jugadoras nuevas en el acumulado del partido.
+        final fixA = _fixture().equipoAId;
+        for (final id in [...posA, ..._bancaIds(true)]) {
+          if (fixA == widget.ladoAId) {
+            a.jugA.add(id);
+          } else {
+            a.jugB.add(id);
+          }
+        }
+        for (final id in [...posB, ..._bancaIds(false)]) {
+          if (fixA == widget.ladoBId) {
+            a.jugA.add(id);
+          } else {
+            a.jugB.add(id);
+          }
+        }
+      }
       return;
     }
     posA = List<String>.from(widget.lineupA);

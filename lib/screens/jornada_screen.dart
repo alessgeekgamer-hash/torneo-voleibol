@@ -1,12 +1,60 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models.dart';
 import '../store.dart';
 import 'roster_screen.dart';
 import 'live_game_screen.dart';
+import 'lineup_screen.dart';
 
 class JornadaScreen extends StatelessWidget {
   final String torneoId;
   const JornadaScreen({super.key, required this.torneoId});
+
+  void _preguntarContinuar(
+      BuildContext context, AppStore store, PausaPartido pausa) {
+    final t = store.porId(torneoId)!;
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Continuar encuentro'),
+        content: Text(
+            '${t.nombreEquipo(pausa.ladoAId)} vs ${t.nombreEquipo(pausa.ladoBId)}\n'
+            'Suspendido en set ${pausa.setNumero} (${pausa.pA}-${pausa.pB}).\n\n'
+            '¿Seguir con las mismas posiciones o editar la alineación para lo que resta del set?'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          LiveGameScreen.desdePausa(pausa: pausa)));
+            },
+            child: const Text('Seguir igual'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => LineupScreen(
+                            torneoId: pausa.torneoId,
+                            matchId: pausa.matchId,
+                            ladoAId: pausa.ladoAId,
+                            ladoBId: pausa.ladoBId,
+                            saqueId: pausa.sacaId,
+                            setNumero: pausa.setNumero,
+                            pausa: pausa,
+                          )));
+            },
+            child: const Text('Editar posiciones'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -53,12 +101,8 @@ class JornadaScreen extends StatelessWidget {
                         if (pausa != null)
                           TextButton(
                             child: const Text('Continuar encuentro'),
-                            onPressed: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (_) =>
-                                        LiveGameScreen.desdePausa(
-                                            pausa: pausa))),
+                            onPressed: () => _preguntarContinuar(
+                                context, store, pausa),
                           ),
                       ],
                     ),
