@@ -84,12 +84,7 @@ class _State extends State<RosterScreen> {
                 return;
               }
               store.persistir();
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => SideServeScreen(
-                          torneoId: widget.torneoId,
-                          matchId: widget.matchId)));
+              _pedirFechaLugar(context, store, t, m);
             },
           ),
         ],
@@ -192,5 +187,55 @@ class _State extends State<RosterScreen> {
   void _error(String msg) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  /// (4) Pantalla emergente de fecha y lugar del partido.
+  void _pedirFechaLugar(
+      BuildContext context, AppStore store, Tournament t, Match m) {
+    final fechaC = TextEditingController(
+        text: m.fecha.isEmpty
+            ? DateTime.now().toString().substring(0, 10)
+            : m.fecha);
+    final lugarC = TextEditingController(text: m.lugar);
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: const Text('Fecha y lugar del partido'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+                controller: fechaC,
+                decoration: const InputDecoration(
+                    labelText: 'Fecha (AAAA-MM-DD)',
+                    border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            TextField(
+                controller: lugarC,
+                decoration: const InputDecoration(
+                    labelText: 'Lugar / cancha',
+                    border: OutlineInputBorder())),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              m.fecha = fechaC.text.trim();
+              m.lugar = lugarC.text.trim();
+              store.persistir();
+              Navigator.pop(context);
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => SideServeScreen(
+                          torneoId: widget.torneoId,
+                          matchId: widget.matchId)));
+            },
+            child: const Text('Guardar y continuar'),
+          ),
+        ],
+      ),
+    );
   }
 }

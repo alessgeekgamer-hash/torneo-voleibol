@@ -109,6 +109,14 @@ class _State extends State<LineupScreen> {
 
   Widget _bloque(String titulo, Team eq, bool esArriba) {
     final jugadores = conNumero(eq);
+    // (6) excluir ya elegidos en otras posiciones del mismo equipo
+    Set<String> elegidos(bool arriba) {
+      final vals = arriba
+          ? [selA1, selA2, selA3, selA4, selA5, selA6]
+          : [selB1, selB2, selB3, selB4, selB5, selB6];
+      return vals.whereType<String>().toSet();
+    }
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -118,25 +126,32 @@ class _State extends State<LineupScreen> {
             Text(titulo,
                 style: const TextStyle(fontWeight: FontWeight.bold)),
             for (var pos = 1; pos <= 6; pos++)
-              DropdownButtonFormField<String>(
-                decoration: InputDecoration(labelText: 'Posición $pos'),
-                value: esArriba
-                    ? _getA(pos)
-                    : _getB(pos),
-                items: jugadores
-                    .map((j) => DropdownMenuItem(
-                        value: j.id,
-                        child: Text(
-                            '#${j.numero} ${j.nombreCompleto}')))
-                    .toList(),
-                onChanged: (v) => setState(() {
-                  if (esArriba) {
-                    _setA(pos, v);
-                  } else {
-                    _setB(pos, v);
-                  }
-                }),
-              ),
+              Builder(builder: (_) {
+                final actual =
+                    esArriba ? _getA(pos) : _getB(pos);
+                final otros = elegidos(esArriba)..remove(actual);
+                final disponibles = jugadores
+                    .where((j) => !otros.contains(j.id))
+                    .toList();
+                return DropdownButtonFormField<String>(
+                  decoration:
+                      InputDecoration(labelText: 'Posición $pos'),
+                  value: actual,
+                  items: disponibles
+                      .map((j) => DropdownMenuItem(
+                          value: j.id,
+                          child: Text(
+                              '#${j.numero} ${j.nombreCompleto}')))
+                      .toList(),
+                  onChanged: (v) => setState(() {
+                    if (esArriba) {
+                      _setA(pos, v);
+                    } else {
+                      _setB(pos, v);
+                    }
+                  }),
+                );
+              }),
           ],
         ),
       ),

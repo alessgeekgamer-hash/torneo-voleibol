@@ -17,6 +17,9 @@ class AppStore extends ChangeNotifier {
   List<Tournament> torneos = [];
   bool oscuro = false;
   bool _cargado = false;
+  Map<String, PausaPartido> pausas = {};
+
+  String _pausaKey(String torneoId, String matchId) => '${torneoId}_$matchId';
 
   Future<void> cargar() async {
     if (_cargado) return;
@@ -31,6 +34,14 @@ class AppStore extends ChangeNotifier {
         torneos = list;
       } catch (_) {}
     }
+    final rawP = p.getString('pausas');
+    if (rawP != null && rawP.isNotEmpty) {
+      try {
+        final m = Map<String, dynamic>.from(jsonDecode(rawP));
+        pausas = m.map((k, v) =>
+            MapEntry(k, PausaPartido.fromJson(Map<String, dynamic>.from(v))));
+      } catch (_) {}
+    }
     _cargado = true;
     notifyListeners();
   }
@@ -40,6 +51,8 @@ class AppStore extends ChangeNotifier {
     await p.setString(
         'torneos', jsonEncode(torneos.map((e) => e.toJson()).toList()));
     await p.setBool('oscuro', oscuro);
+    await p.setString(
+        'pausas', jsonEncode(pausas.map((k, v) => MapEntry(k, v.toJson()))));
   }
 
   Future<void> toggleOscuro() async {
@@ -135,7 +148,64 @@ class AppStore extends ChangeNotifier {
     t.resultados.add(r);
     match.jugado = true;
     match.programado = false;
+    pausas.remove(_pausaKey(t.id, match.id));
     // avanzar directa si aplica
+    final nuevos = avanzarDirecta(t);
+    t.fixture.addAll(nuevos);
+    await persistir();
+  }
+
+  PausaPartido? pausaDe(String torneoId, String matchId) =>
+      pausas[_pausaKey(torneoId, matchId)];
+
+  Future<void> guardarPausa(PausaPartido pausa) async {
+    pausas[_pausaKey(pausa.torneoId, pausa.matchId)] = pausa;
+    await persistir();
+  }
+
+  Future<void> borrarPausa(String torneoId, String matchId) async {
+    pausas.remove(_pausaKey(torneoId, matchId));
+    await persistir();
+  }
+
+  /// Da de baja a un equipo: todos sus partidos (jugados o no) se
+  /// registran como derrota por default para los rivales con el
+  /// formato de sets del torneo a 25-0 por set.
+  Future<void> darDeBajaEquipo(Tournament t, String equipoId) async {
+    final setsGanar = setsParaGanar(t.formato);
+    final parcialesDefault =
+        List<String>.generate(setsGanar, (_) => '25-0');
+    if (!t.bajas.contains(equipoId)) t.bajas.add(equipoId);
+    for (final m in t.fixture) {
+      if (m.equipoAId != equipoId && m.equipoBId != equipoId) continue;
+      final rivalId =
+          m.equipoAId == equipoId ? m.equipoBId : m.equipoAId;
+      final esA = m.equipoAId == rivalId;
+      final setsA = esA ? setsGanar : 0;
+      final setsB = esA ? 0 : setsGanar;
+      // parciales orientados al fixture (equipoA-equipoB)
+      final parc = parcialesDefault.map((p) {
+        final partes = p.split('-');
+        return esA ? p : '${partes[1]}-${partes[0]}';
+      }).toList();
+      t.resultados.removeWhere((e) => e.matchId == m.id);
+      t.resultados.add(MatchResult(
+        matchId: m.id,
+        equipoAId: m.equipoAId,
+        equipoBId: m.equipoBId,
+        setsA: setsA,
+        setsB: setsB,
+        parciales: parc,
+        ganadorId: rivalId,
+        lugar: m.lugar,
+        fecha: m.fecha.isEmpty
+            ? DateTime.now().toIso8601String()
+            : m.fecha,
+      ));
+      m.jugado = true;
+      m.programado = false;
+      pausas.remove(_pausaKey(t.id, m.id));
+    }
     final nuevos = avanzarDirecta(t);
     t.fixture.addAll(nuevos);
     await persistir();

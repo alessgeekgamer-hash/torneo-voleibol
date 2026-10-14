@@ -13,6 +13,11 @@ class _Acc {
   List<Sanction> sanciones = [];
   Set<String> jugA = {};
   Set<String> jugB = {};
+  // Tiempos/cambios por set en orden fixture (A/B del fixture)
+  List<int> tiemposFA = [];
+  List<int> tiemposFB = [];
+  List<int> cambiosFA = [];
+  List<int> cambiosFB = [];
 }
 
 class LiveGameScreen extends StatefulWidget {
@@ -26,6 +31,7 @@ class LiveGameScreen extends StatefulWidget {
   final List<String> lineupB; // ids pos1..6 ladoB
   final List<String>? prevA;
   final List<String>? prevB;
+  final PausaPartido? pausaInicial;
   const LiveGameScreen(
       {super.key,
       required this.torneoId,
@@ -37,7 +43,21 @@ class LiveGameScreen extends StatefulWidget {
       required this.lineupA,
       required this.lineupB,
       this.prevA,
-      this.prevB});
+      this.prevB,
+      this.pausaInicial});
+
+  factory LiveGameScreen.desdePausa({required PausaPartido pausa}) =>
+      LiveGameScreen(
+        torneoId: pausa.torneoId,
+        matchId: pausa.matchId,
+        ladoAId: pausa.ladoAId,
+        ladoBId: pausa.ladoBId,
+        saqueId: pausa.sacaId,
+        setNumero: pausa.setNumero,
+        lineupA: List<String>.from(pausa.posA),
+        lineupB: List<String>.from(pausa.posB),
+        pausaInicial: pausa,
+      );
 
   static final Map<String, _Acc> sesiones = {};
 
@@ -60,9 +80,45 @@ class _State extends State<LiveGameScreen> {
   _Acc get acc => LiveGameScreen.sesiones.putIfAbsent(
       '${widget.torneoId}_${widget.matchId}', () => _Acc());
 
+  String get _key => '${widget.torneoId}_${widget.matchId}';
+
   @override
   void initState() {
     super.initState();
+    final pausa = widget.pausaInicial;
+    if (pausa != null) {
+      // (4) Restaurar encuentro suspendido tal cual se quedó.
+      posA = List<String>.from(pausa.posA);
+      posB = List<String>.from(pausa.posB);
+      saca = pausa.sacaId;
+      pA = pausa.pA;
+      pB = pausa.pB;
+      tA = pausa.tA;
+      tB = pausa.tB;
+      subA = ControlSustituciones.desdeJson(pausa.subA);
+      subB = ControlSustituciones.desdeJson(pausa.subB);
+      titA = pausa.titA.toSet();
+      if (titA.isEmpty) titA = posA.toSet();
+      titB = pausa.titB.toSet();
+      if (titB.isEmpty) titB = posB.toSet();
+      ladoInvertido = pausa.ladoInvertido;
+      cambioDefinitivoHecho = pausa.cambioHecho;
+      final a = _Acc()
+        ..setsFA = pausa.accSetsFA
+        ..setsFB = pausa.accSetsFB
+        ..parciales = List<String>.from(pausa.accParciales)
+        ..sanciones = pausa.accSanciones
+            .map((e) => Sanction.fromJson(Map<String, dynamic>.from(e)))
+            .toList()
+        ..jugA = pausa.accJugA.toSet()
+        ..jugB = pausa.accJugB.toSet()
+        ..tiemposFA = List<int>.from(pausa.accTiemposA)
+        ..tiemposFB = List<int>.from(pausa.accTiemposB)
+        ..cambiosFA = List<int>.from(pausa.accCambiosA)
+        ..cambiosFB = List<int>.from(pausa.accCambiosB);
+      LiveGameScreen.sesiones[_key] = a;
+      return;
+    }
     posA = List<String>.from(widget.lineupA);
     posB = List<String>.from(widget.lineupB);
     saca = widget.saqueId;
@@ -71,7 +127,6 @@ class _State extends State<LiveGameScreen> {
     titA = posA.toSet();
     titB = posB.toSet();
     // registrar jugadores que participan
-    final t = _torneo();
     final fixA = _fixture().equipoAId;
     for (final id in [...posA, ..._bancaIds(true)]) {
       if (fixA == widget.ladoAId) {
@@ -87,7 +142,6 @@ class _State extends State<LiveGameScreen> {
         acc.jugB.add(id);
       }
     }
-    t.toString();
   }
 
   Tournament _torneo() =>
@@ -106,7 +160,7 @@ class _State extends State<LiveGameScreen> {
         }
       }
     }
-    return id.substring(0, 4);
+    return id.length > 4 ? id.substring(0, 4) : id;
   }
 
   int? _numeroJug(String id) {
@@ -131,7 +185,6 @@ class _State extends State<LiveGameScreen> {
     if (setTerminado) return;
     setState(() {
       if (!resta) {
-        // si cambia el saque, rota el que gana
         final ganadorId = paraA ? widget.ladoAId : widget.ladoBId;
         if (ganadorId != saca) {
           if (paraA) {
@@ -150,27 +203,23 @@ class _State extends State<LiveGameScreen> {
         if (paraA && pA > 0) pA--;
         if (!paraA && pB > 0) pB--;
       }
-      // cambio de lado automático en definitivo a los 8 puntos
+      // (10) Definitivo: cambio cuando UN equipo llega a 8 (no suma 8).
+      // El punto anterior cuenta: si se resta después, no se revierte.
       final f = _torneo().formato;
       if (esSetDefinitivo(widget.setNumero, f) &&
           !cambioDefinitivoHecho &&
-          (pA + pB) >= 8) {
+          (pA == 8 || pB == 8)) {
         cambioDefinitivoHecho = true;
         ladoInvertido = !ladoInvertido;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text(
-                'Set definitivo: 8 puntos, cambio de lado automático')));
+                'Set definitivo: un equipo llegó a 8, cambio de lado automático')));
       }
       _verificarFinSet();
     });
   }
 
-  void _verificarFinSet() {
-    final f = _torneo().formato;
-    if (!ganaSet(pA, pB, widget.setNumero, f)) return;
-    setTerminado = true;
-    final ganoA = pA > pB;
-    // parcial en orden fixture
+  void _registrarSetEnAcc(bool ganoA) {
     final fix = _fixture();
     String parcial;
     if (fix.equipoAId == widget.ladoAId) {
@@ -179,9 +228,9 @@ class _State extends State<LiveGameScreen> {
       parcial = '$pB-$pA';
     }
     acc.parciales.add(parcial);
-    if ((fix.equipoAId == widget.ladoAId && ganoA) ||
-        (fix.equipoBId == widget.ladoAId && ganoA)) {
-      // ladoA ganó el set
+    final ladoAGano = ganoA;
+    if ((fix.equipoAId == widget.ladoAId && ladoAGano) ||
+        (fix.equipoBId == widget.ladoAId && ladoAGano)) {
       if (fix.equipoAId == widget.ladoAId) {
         acc.setsFA++;
       } else {
@@ -194,7 +243,18 @@ class _State extends State<LiveGameScreen> {
         acc.setsFB++;
       }
     }
-    // registrar jugadores del set
+    // Tiempos/cambios del set en orden fixture
+    if (fix.equipoAId == widget.ladoAId) {
+      acc.tiemposFA.add(tA);
+      acc.tiemposFB.add(tB);
+      acc.cambiosFA.add(subA.usadas);
+      acc.cambiosFB.add(subB.usadas);
+    } else {
+      acc.tiemposFA.add(tB);
+      acc.tiemposFB.add(tA);
+      acc.cambiosFA.add(subB.usadas);
+      acc.cambiosFB.add(subA.usadas);
+    }
     for (final id in posA) {
       if (fix.equipoAId == widget.ladoAId) {
         acc.jugA.add(id);
@@ -210,6 +270,14 @@ class _State extends State<LiveGameScreen> {
       }
     }
     context.read<AppStore>().persistir();
+  }
+
+  void _verificarFinSet() {
+    final f = _torneo().formato;
+    if (!ganaSet(pA, pB, widget.setNumero, f)) return;
+    setTerminado = true;
+    final ganoA = pA > pB;
+    _registrarSetEnAcc(ganoA);
     final need = setsParaGanar(f);
     final finPartido = acc.setsFA >= need || acc.setsFB >= need;
     if (finPartido) {
@@ -267,7 +335,6 @@ class _State extends State<LiveGameScreen> {
         acc.setsFA > acc.setsFB ? fix.equipoAId : fix.equipoBId;
     final setsA = acc.setsFA;
     final setsB = acc.setsFB;
-    // construir snapshots
     List<PlayerSnapshot> snap(Set<String> ids) {
       return ids.map((id) {
         String nom = id;
@@ -284,10 +351,6 @@ class _State extends State<LiveGameScreen> {
       }).toList();
     }
 
-    final jugA = fix.equipoAId == widget.ladoAId
-        ? {...acc.jugA}
-        : {...acc.jugB};
-    // acc guarda en orden fixture ya; jugA/jugB ya están en fixture.
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -326,13 +389,19 @@ class _State extends State<LiveGameScreen> {
                 jugadoresB: snap(fix.equipoAId == widget.ladoAId
                     ? _todosLado(false)
                     : _todosLado(true)),
+                fecha: fix.fecha.isEmpty
+                    ? DateTime.now().toIso8601String()
+                    : fix.fecha,
+                lugar: fix.lugar,
+                tiemposA: List<int>.from(acc.tiemposFA),
+                tiemposB: List<int>.from(acc.tiemposFB),
+                cambiosA: List<int>.from(acc.cambiosFA),
+                cambiosB: List<int>.from(acc.cambiosFB),
               );
-              LiveGameScreen.sesiones
-                  .remove('${widget.torneoId}_${widget.matchId}');
+              LiveGameScreen.sesiones.remove(_key);
               await store.guardarResultado(t, fix, r);
               if (!context.mounted) return;
               Navigator.popUntil(context, (ro) => ro.isFirst);
-              jugA.toString();
             },
             child: const Text('Guardar y salir'),
           ),
@@ -346,7 +415,6 @@ class _State extends State<LiveGameScreen> {
     if (esLadoA) {
       ids.addAll(posA);
       ids.addAll(_bancaIds(true));
-      // incluir acumulados previos de ese lado
       final fix = _fixture();
       if (fix.equipoAId == widget.ladoAId) {
         ids.addAll(acc.jugA);
@@ -366,24 +434,76 @@ class _State extends State<LiveGameScreen> {
     return ids;
   }
 
+  /// (4) Suspender: guarda el punto exacto para "Continuar encuentro".
+  Future<void> _suspender() async {
+    final store = context.read<AppStore>();
+    final fix = _fixture();
+    final pausa = PausaPartido(
+      torneoId: widget.torneoId,
+      matchId: widget.matchId,
+      ladoAId: widget.ladoAId,
+      ladoBId: widget.ladoBId,
+      sacaId: saca,
+      setNumero: widget.setNumero,
+      pA: pA,
+      pB: pB,
+      tA: tA,
+      tB: tB,
+      posA: List<String>.from(posA),
+      posB: List<String>.from(posB),
+      subA: subA.toJson(),
+      subB: subB.toJson(),
+      ladoInvertido: ladoInvertido,
+      cambioHecho: cambioDefinitivoHecho,
+      accSetsFA: acc.setsFA,
+      accSetsFB: acc.setsFB,
+      accParciales: List<String>.from(acc.parciales),
+      accSanciones: acc.sanciones.map((e) => e.toJson()).toList(),
+      accJugA: acc.jugA.toList(),
+      accJugB: acc.jugB.toList(),
+      accTiemposA: List<int>.from(acc.tiemposFA),
+      accTiemposB: List<int>.from(acc.tiemposFB),
+      accCambiosA: List<int>.from(acc.cambiosFA),
+      accCambiosB: List<int>.from(acc.cambiosFB),
+      ladoAOrig: widget.ladoAId,
+      ladoBOrig: widget.ladoBId,
+      saqueOrig: widget.saqueId,
+      titA: titA.toList(),
+      titB: titB.toList(),
+    );
+    await store.guardarPausa(pausa);
+    fix.programado = true;
+    await store.persistir();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+            'Encuentro suspendido en set ${widget.setNumero} ($pA-$pB). Usa "Continuar encuentro".')));
+    Navigator.pop(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     final ladoA = widget.ladoAId;
     final ladoB = widget.ladoBId;
-    // orden visual
     final izqEsA = !ladoInvertido;
     final idIzq = izqEsA ? ladoA : ladoB;
     final idDer = izqEsA ? ladoB : ladoA;
     final pIzq = izqEsA ? pA : pB;
     final pDer = izqEsA ? pB : pA;
-    final setsIzq =
-        _setsDe(idIzq);
+    final setsIzq = _setsDe(idIzq);
     final setsDer = _setsDe(idDer);
 
     return Scaffold(
       appBar: AppBar(
           title: Text(
-              '${_nombre(ladoA)} vs ${_nombre(ladoB)} • Set ${widget.setNumero}')),
+              '${_nombre(ladoA)} vs ${_nombre(ladoB)} • Set ${widget.setNumero}'),
+          actions: [
+            IconButton(
+              tooltip: 'Suspender encuentro',
+              icon: const Icon(Icons.pause_circle),
+              onPressed: _suspender,
+            ),
+          ]),
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: [
@@ -396,11 +516,14 @@ class _State extends State<LiveGameScreen> {
               style: const TextStyle(fontSize: 16)),
           const SizedBox(height: 8),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _marcador(idIzq, pIzq, true),
-              const Text(':', style: TextStyle(fontSize: 40)),
-              _marcador(idDer, pDer, false),
+              Expanded(child: _marcador(idIzq, pIzq)),
+              const Padding(
+                padding: EdgeInsets.only(top: 60),
+                child: Text(':', style: TextStyle(fontSize: 60)),
+              ),
+              Expanded(child: _marcador(idDer, pDer)),
             ],
           ),
           const SizedBox(height: 8),
@@ -422,6 +545,13 @@ class _State extends State<LiveGameScreen> {
                       child: const Text('Cambio de lado'))),
             ],
           ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.pause),
+            label: const Text(
+                'Suspender encuentro (continuar después)'),
+            onPressed: _suspender,
+          ),
         ],
       ),
     );
@@ -433,19 +563,36 @@ class _State extends State<LiveGameScreen> {
     return acc.setsFB;
   }
 
-  Widget _marcador(String teamId, int pts, bool esA) {
-    final esLadoA = (teamId == widget.ladoAId);
-    final isA = esLadoA ? true : false;
-    // paraA se refiere a ladoA original
+  /// (7) Marcador al doble (112) y números negros en negritas.
+  Widget _marcador(String teamId, int pts) {
     final paraA = teamId == widget.ladoAId;
+    final tiempos = paraA ? tA : tB;
+    final cambios = paraA ? subA.usadas : subB.usadas;
     return Column(
       children: [
         Text(_nombre(teamId),
+            textAlign: TextAlign.center,
             style: const TextStyle(fontWeight: FontWeight.bold)),
-        Text('$pts',
-            style: const TextStyle(
-                fontSize: 56, fontWeight: FontWeight.bold)),
+        Container(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.black, width: 2),
+          ),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text('$pts',
+                style: const TextStyle(
+                    fontSize: 112,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.black)),
+          ),
+        ),
+        const SizedBox(height: 6),
         Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             ElevatedButton(
                 onPressed: () => _punto(paraA),
@@ -459,17 +606,16 @@ class _State extends State<LiveGameScreen> {
         ),
         const SizedBox(height: 4),
         Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             ElevatedButton(
               onPressed: () => _pedirTiempo(paraA),
-              child: Text(
-                  'Tiempo (${paraA ? tA : tB}/2)'),
+              child: Text('Tiempo ($tiempos/2)'),
             ),
             const SizedBox(width: 8),
             ElevatedButton(
               onPressed: () => _dialogoCambio(paraA),
-              child: Text(
-                  'Cambio (${paraA ? subA.usadas : subB.usadas}/6)'),
+              child: Text('Cambio ($cambios/6)'),
             ),
           ],
         ),
@@ -477,7 +623,6 @@ class _State extends State<LiveGameScreen> {
           const Text('● SAQUE',
               style: TextStyle(
                   color: Colors.orange, fontWeight: FontWeight.bold)),
-        isA.toString().isEmpty ? const SizedBox() : const SizedBox(),
       ],
     );
   }
@@ -506,45 +651,53 @@ class _State extends State<LiveGameScreen> {
     });
   }
 
+  /// (7)(9) Cancha: números negros en negritas, círculos más separados
+  /// y posiciones que se espejean al cambiar de lado.
   Widget _cancha() {
-    // pos: idx0=p1 ... idx5=p6
     Widget celda(String id, bool conSaque) {
       final num = _numeroJug(id)?.toString() ?? '?';
       return Container(
-        width: 64,
-        height: 64,
-        margin: const EdgeInsets.all(4),
+        width: 72,
+        height: 72,
+        margin: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: conSaque ? Colors.yellow : Colors.blue.shade50,
           border: Border.all(color: Colors.blueGrey, width: 2),
-          borderRadius: BorderRadius.circular(32),
+          borderRadius: BorderRadius.circular(36),
         ),
         child: Center(
             child: Text(num,
                 style: const TextStyle(
-                    fontSize: 26, fontWeight: FontWeight.bold))),
+                    fontSize: 30,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.black))),
       );
     }
 
-    String sacaA = saca == widget.ladoAId ? posA[0] : '';
-    String sacaB = saca == widget.ladoBId ? posB[0] : '';
+    List<String> posDe(String teamId) =>
+        teamId == widget.ladoAId ? posA : posB;
+    String sacaDe(String teamId) =>
+        saca == teamId ? posDe(teamId)[0] : '';
 
-    Widget ladoA() {
+    // Lado izquierdo: zaguero | ataque (frente a la red a la derecha)
+    Widget equipoIzq(String teamId) {
+      final pos = posDe(teamId);
+      final s = sacaDe(teamId);
       return Column(
         children: [
-          Text(_nombre(widget.ladoAId),
+          Text(_nombre(teamId),
               style:
                   const TextStyle(fontWeight: FontWeight.bold)),
           Row(children: [
             Column(children: [
-              celda(posA[4], posA[4] == sacaA),
-              celda(posA[5], posA[5] == sacaA),
-              celda(posA[0], posA[0] == sacaA),
+              celda(pos[4], pos[4] == s),
+              celda(pos[5], pos[5] == s),
+              celda(pos[0], pos[0] == s),
             ]),
             Column(children: [
-              celda(posA[3], posA[3] == sacaA),
-              celda(posA[2], posA[2] == sacaA),
-              celda(posA[1], posA[1] == sacaA),
+              celda(pos[3], pos[3] == s),
+              celda(pos[2], pos[2] == s),
+              celda(pos[1], pos[1] == s),
             ]),
           ]),
           const Text('5-4 / 6-3 / 1-2',
@@ -553,22 +706,26 @@ class _State extends State<LiveGameScreen> {
       );
     }
 
-    Widget ladoB() {
+    // (9) Lado derecho espejeado: ataque | zaguero.
+    // El pos 1 pasa de inferior-izquierda a superior-derecha.
+    Widget equipoDer(String teamId) {
+      final pos = posDe(teamId);
+      final s = sacaDe(teamId);
       return Column(
         children: [
-          Text(_nombre(widget.ladoBId),
+          Text(_nombre(teamId),
               style:
                   const TextStyle(fontWeight: FontWeight.bold)),
           Row(children: [
             Column(children: [
-              celda(posB[1], posB[1] == sacaB),
-              celda(posB[2], posB[2] == sacaB),
-              celda(posB[3], posB[3] == sacaB),
+              celda(pos[1], pos[1] == s),
+              celda(pos[2], pos[2] == s),
+              celda(pos[3], pos[3] == s),
             ]),
             Column(children: [
-              celda(posB[0], posB[0] == sacaB),
-              celda(posB[5], posB[5] == sacaB),
-              celda(posB[4], posB[4] == sacaB),
+              celda(pos[0], pos[0] == s),
+              celda(pos[5], pos[5] == s),
+              celda(pos[4], pos[4] == s),
             ]),
           ]),
           const Text('2-1 / 3-6 / 4-5',
@@ -576,6 +733,10 @@ class _State extends State<LiveGameScreen> {
         ],
       );
     }
+
+    final izqEsA = !ladoInvertido;
+    final idIzq = izqEsA ? widget.ladoAId : widget.ladoBId;
+    final idDer = izqEsA ? widget.ladoBId : widget.ladoAId;
 
     return Card(
       color: Colors.green.shade50,
@@ -586,24 +747,27 @@ class _State extends State<LiveGameScreen> {
             const Text(
                 'ZAGUERO • ATAQUE • RED • ATAQUE • ZAGUERO',
                 style: TextStyle(fontSize: 11)),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ladoInvertido ? ladoB() : ladoA(),
-                Container(
-                    width: 8,
-                    height: 240,
-                    color: Colors.red,
-                    child: const Center(
-                        child: RotatedBox(
-                            quarterTurns: 1,
-                            child: Text('RED',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight:
-                                        FontWeight.bold))))),
-                ladoInvertido ? ladoA() : ladoB(),
-              ],
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  equipoIzq(idIzq),
+                  Container(
+                      width: 8,
+                      height: 300,
+                      color: Colors.red,
+                      child: const Center(
+                          child: RotatedBox(
+                              quarterTurns: 1,
+                              child: Text('RED',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight:
+                                          FontWeight.bold))))),
+                  equipoDer(idDer),
+                ],
+              ),
             ),
             const Text(
                 'Rotación en manecillas del reloj • ● amarillo = saque',
@@ -659,7 +823,6 @@ class _State extends State<LiveGameScreen> {
 
   void _dialogoTardio() {
     final t = _torneo();
-    // jugadores de cédula sin número
     final candidatos = <String, String>{}; // jugId -> etiqueta
     for (final eq in [widget.ladoAId, widget.ladoBId]) {
       final team = t.equipoPorId(eq)!;
@@ -712,7 +875,6 @@ class _State extends State<LiveGameScreen> {
                 if (sel == null) return;
                 final n = int.tryParse(numC.text.trim());
                 if (n == null) return;
-                // verificar duplicado en su equipo
                 String eqId = '';
                 for (final eq in [widget.ladoAId, widget.ladoBId]) {
                   final team = t.equipoPorId(eq)!;
@@ -732,7 +894,6 @@ class _State extends State<LiveGameScreen> {
                 team.jugadores
                     .firstWhere((j) => j.id == sel)
                     .numero = n;
-                // agregar a acumulados
                 final fix = _fixture();
                 if (fix.equipoAId == eqId) {
                   acc.jugA.add(sel!);
@@ -750,6 +911,7 @@ class _State extends State<LiveGameScreen> {
     );
   }
 
+  /// (8) Cambios FIVB estrictos con listas filtradas en ambos sentidos.
   void _dialogoCambio(bool paraA) {
     final activos = paraA ? posA : posB;
     final banca = _bancaIds(paraA);
@@ -770,6 +932,17 @@ class _State extends State<LiveGameScreen> {
     showDialog(
       context: context,
       builder: (_) => StatefulBuilder(builder: (c, setS) {
+        // Filtrado dinámico: solo opciones reales según el reglamento.
+        List<String> entraOpts = banca;
+        List<String> saleOpts = activos;
+        if (sale != null) {
+          entraOpts = ctrl.entradasLegalesPara(sale!, banca, tit);
+          if (entra != null && !entraOpts.contains(entra)) entra = null;
+        }
+        if (entra != null) {
+          saleOpts = ctrl.salidasLegalesPara(entra!, activos, tit);
+          if (sale != null && !saleOpts.contains(sale)) sale = null;
+        }
         String? err;
         if (sale != null && entra != null) {
           err = ctrl.validar(sale!, entra!, tit);
@@ -784,7 +957,7 @@ class _State extends State<LiveGameScreen> {
                 isExpanded: true,
                 hint: const Text('Sale (6 activos)'),
                 value: sale,
-                items: activos
+                items: saleOpts
                     .map((id) => DropdownMenuItem(
                         value: id, child: Text(_nombreJug(id))))
                     .toList(),
@@ -794,12 +967,21 @@ class _State extends State<LiveGameScreen> {
                 isExpanded: true,
                 hint: const Text('Entra (banca)'),
                 value: entra,
-                items: banca
+                items: entraOpts
                     .map((id) => DropdownMenuItem(
                         value: id, child: Text(_nombreJug(id))))
                     .toList(),
                 onChanged: (v) => setS(() => entra = v),
               ),
+              const Text(
+                  'El titular solo vuelve por su sustituto; el sustituto solo sale por su titular original.',
+                  style: TextStyle(fontSize: 11, color: Colors.grey)),
+              if (sale != null && entraOpts.isEmpty)
+                const Text('Ese jugador no tiene relevo legal disponible.',
+                    style: TextStyle(color: Colors.red)),
+              if (entra != null && saleOpts.isEmpty)
+                const Text('Nadie puede salir legalmente por ese jugador.',
+                    style: TextStyle(color: Colors.red)),
               if (err != null)
                 Text(err,
                     style:
@@ -832,14 +1014,12 @@ class _State extends State<LiveGameScreen> {
   }
 
   void _dialogoSancion() {
-    final t = _torneo();
     String? tipo = tiposSancion.first;
     String? eqId = widget.ladoAId;
     String? jugSel; // id o 'EQUIPO'
     showDialog(
       context: context,
       builder: (_) => StatefulBuilder(builder: (c, setS) {
-        final team = t.equipoPorId(eqId!)!;
         final activos = (eqId == widget.ladoAId ? posA : posB);
         final banca = _bancaIds(eqId == widget.ladoAId);
         final opciones = [
@@ -924,7 +1104,6 @@ class _State extends State<LiveGameScreen> {
                           set: widget.setNumero,
                           marcadorA: pA,
                           marcadorB: pB));
-                      team.toString();
                       setState(() {});
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(

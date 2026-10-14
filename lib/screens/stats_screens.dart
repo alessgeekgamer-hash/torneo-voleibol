@@ -115,7 +115,12 @@ class HistoryScreen extends StatelessWidget {
                     title: Text(
                         '${t.nombreEquipo(r.equipoAId)} ${r.setsA} - ${r.setsB} ${t.nombreEquipo(r.equipoBId)}'),
                     subtitle: Text(
-                        'Ganador: ${t.nombreEquipo(r.ganadorId)}\nParciales: ${r.parciales.join(', ')}${r.sanciones.isNotEmpty ? '\nSanciones: ${r.sanciones.map((s) => s.tipo).join(', ')}' : ''}'),
+                        'Ganador: ${t.nombreEquipo(r.ganadorId)}\nFecha: ${r.fecha.isEmpty ? '-' : r.fecha} • Lugar: ${r.lugar.isEmpty ? '-' : r.lugar}\nParciales: ${r.parciales.join(', ')}${r.sanciones.isNotEmpty ? '\nSanciones: ${r.sanciones.map((s) => s.tipo).join(', ')}' : ''}'),
+                    trailing: IconButton(
+                      tooltip: 'Exportar PDF del partido',
+                      icon: const Icon(Icons.picture_as_pdf),
+                      onPressed: () => exportarHojaPartido(t, r),
+                    ),
                   ),
                 );
               },

@@ -20,6 +20,7 @@ bool ganaSet(int a, int b, int setNum, Formato f) {
 bool puedePedirTiempo(int usados) => usados < 2;
 
 class ControlSustituciones {
+  ControlSustituciones();
   int usadas = 0;
   // titularId -> sustitutoId actual
   final Map<String, String> titularASustituto = {};
@@ -32,6 +33,76 @@ class ControlSustituciones {
 
   bool get puedeSustituir => usadas < 6;
 
+  Map<String, dynamic> toJson() => {
+        'usadas': usadas,
+        'titularASustituto': titularASustituto,
+        'sustitutoATitular': sustitutoATitular,
+        'bloqueados': bloqueados.toList(),
+        'reingresoUsado': reingresoUsado.toList(),
+      };
+  factory ControlSustituciones.desdeJson(Map<String, dynamic> j) {
+    final c = ControlSustituciones();
+    c.usadas = (j['usadas'] ?? 0) as int;
+    final t2s = Map<String, dynamic>.from(j['titularASustituto'] ?? {});
+    t2s.forEach((k, v) => c.titularASustituto[k] = '$v');
+    final s2t = Map<String, dynamic>.from(j['sustitutoATitular'] ?? {});
+    s2t.forEach((k, v) => c.sustitutoATitular[k] = '$v');
+    c.bloqueados
+        .addAll(((j['bloqueados'] ?? []) as List).map((e) => '$e'));
+    c.reingresoUsado
+        .addAll(((j['reingresoUsado'] ?? []) as List).map((e) => '$e'));
+    return c;
+  }
+
+  /// Lista de jugadores de banca que pueden entrar por [saleId].
+  List<String> entradasLegalesPara(
+      String saleId, List<String> banca, Set<String> titularesIniciales) {
+    if (!puedeSustituir) return [];
+    final enCanchaSub = sustitutoATitular[saleId];
+    if (titularesIniciales.contains(saleId)) {
+      // Titular en cancha: no puede salir si ya usó su reingreso.
+      if (reingresoUsado.contains(saleId)) return [];
+      if (titularASustituto.containsKey(saleId)) return [];
+      // Solo banca fresca: excluye bloqueados y titulares en espera de reingreso.
+      return banca
+          .where((e) =>
+              !bloqueados.contains(e) &&
+              !titularesIniciales.contains(e))
+          .toList();
+    }
+    // Sustituto en cancha: solo puede salir por su titular original.
+    if (enCanchaSub != null) {
+      if (reingresoUsado.contains(enCanchaSub)) return [];
+      if (banca.contains(enCanchaSub)) return [enCanchaSub];
+      return [];
+    }
+    return [];
+  }
+
+  /// Lista de jugadores activos que pueden salir para que entre [entraId].
+  List<String> salidasLegalesPara(
+      String entraId, List<String> activos, Set<String> titularesIniciales) {
+    if (!puedeSustituir) return [];
+    if (bloqueados.contains(entraId)) return [];
+    if (titularesIniciales.contains(entraId)) {
+      // Titular en banca: solo puede volver por su propio sustituto.
+      final sub = titularASustituto[entraId];
+      if (sub != null && activos.contains(sub)) {
+        if (reingresoUsado.contains(entraId)) return [];
+        return [sub];
+      }
+      return [];
+    }
+    // Banca fresca: puede entrar por cualquier titular en cancha
+    // sin sustituto activo y sin reingreso usado.
+    return activos
+        .where((a) =>
+            titularesIniciales.contains(a) &&
+            !titularASustituto.containsKey(a) &&
+            !reingresoUsado.contains(a))
+        .toList();
+  }
+
   /// Valida si [saleId] puede ser sustituido por [entraId].
   String? validar(String saleId, String entraId, Set<String> titularesIniciales) {
     if (usadas >= 6) return 'Máximo 6 sustituciones por set (FIVB).';
@@ -42,6 +113,9 @@ class ControlSustituciones {
     // Si el que sale es un titular inicial
     final esTitular = titularesIniciales.contains(saleId);
     if (esTitular) {
+      if (reingresoUsado.contains(saleId)) {
+        return 'Ese titular ya usó su reingreso y no puede salir de nuevo (FIVB).';
+      }
       // ¿ya tiene un sustituto activo? entonces es reingreso del titular?
       // Caso: sale el sustituto para que vuelva el titular.
       return null;

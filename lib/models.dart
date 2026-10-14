@@ -99,6 +99,8 @@ class Match {
   String etiqueta;
   bool programado;
   bool jugado;
+  String fecha;
+  String lugar;
 
   Match({
     String? id,
@@ -108,6 +110,8 @@ class Match {
     this.etiqueta = '',
     this.programado = false,
     this.jugado = false,
+    this.fecha = '',
+    this.lugar = '',
   }) : id = id ?? newId();
 
   Map<String, dynamic> toJson() => {
@@ -118,6 +122,8 @@ class Match {
         'etiqueta': etiqueta,
         'programado': programado,
         'jugado': jugado,
+        'fecha': fecha,
+        'lugar': lugar,
       };
   factory Match.fromJson(Map<String, dynamic> j) => Match(
         id: j['id'] as String?,
@@ -127,6 +133,8 @@ class Match {
         etiqueta: (j['etiqueta'] ?? '') as String,
         programado: (j['programado'] ?? false) as bool,
         jugado: (j['jugado'] ?? false) as bool,
+        fecha: (j['fecha'] ?? '') as String,
+        lugar: (j['lugar'] ?? '') as String,
       );
 }
 
@@ -200,6 +208,11 @@ class MatchResult {
   List<PlayerSnapshot> jugadoresA;
   List<PlayerSnapshot> jugadoresB;
   String fecha;
+  String lugar;
+  List<int> tiemposA;
+  List<int> tiemposB;
+  List<int> cambiosA;
+  List<int> cambiosB;
 
   MatchResult({
     required this.matchId,
@@ -213,10 +226,24 @@ class MatchResult {
     List<PlayerSnapshot>? jugadoresA,
     List<PlayerSnapshot>? jugadoresB,
     String? fecha,
+    this.lugar = '',
+    List<int>? tiemposA,
+    List<int>? tiemposB,
+    List<int>? cambiosA,
+    List<int>? cambiosB,
   })  : sanciones = sanciones ?? [],
         jugadoresA = jugadoresA ?? [],
         jugadoresB = jugadoresB ?? [],
-        fecha = fecha ?? DateTime.now().toIso8601String();
+        fecha = fecha ?? DateTime.now().toIso8601String(),
+        tiemposA = tiemposA ?? [],
+        tiemposB = tiemposB ?? [],
+        cambiosA = cambiosA ?? [],
+        cambiosB = cambiosB ?? [];
+
+  int get totalTiemposA => tiemposA.fold(0, (a, b) => a + b);
+  int get totalTiemposB => tiemposB.fold(0, (a, b) => a + b);
+  int get totalCambiosA => cambiosA.fold(0, (a, b) => a + b);
+  int get totalCambiosB => cambiosB.fold(0, (a, b) => a + b);
 
   Map<String, dynamic> toJson() => {
         'matchId': matchId,
@@ -230,6 +257,11 @@ class MatchResult {
         'jugadoresA': jugadoresA.map((e) => e.toJson()).toList(),
         'jugadoresB': jugadoresB.map((e) => e.toJson()).toList(),
         'fecha': fecha,
+        'lugar': lugar,
+        'tiemposA': tiemposA,
+        'tiemposB': tiemposB,
+        'cambiosA': cambiosA,
+        'cambiosB': cambiosB,
       };
   factory MatchResult.fromJson(Map<String, dynamic> j) => MatchResult(
         matchId: j['matchId'] as String,
@@ -249,6 +281,171 @@ class MatchResult {
             .map((e) => PlayerSnapshot.fromJson(Map<String, dynamic>.from(e)))
             .toList(),
         fecha: j['fecha'] as String?,
+        lugar: (j['lugar'] ?? '') as String,
+        tiemposA: ((j['tiemposA'] ?? []) as List)
+            .map((e) => (e as num).toInt())
+            .toList(),
+        tiemposB: ((j['tiemposB'] ?? []) as List)
+            .map((e) => (e as num).toInt())
+            .toList(),
+        cambiosA: ((j['cambiosA'] ?? []) as List)
+            .map((e) => (e as num).toInt())
+            .toList(),
+        cambiosB: ((j['cambiosB'] ?? []) as List)
+            .map((e) => (e as num).toInt())
+            .toList(),
+      );
+}
+
+/// Estado de un encuentro suspendido a mitad (para "Continuar encuentro").
+class PausaPartido {
+  String torneoId;
+  String matchId;
+  String ladoAId;
+  String ladoBId;
+  String sacaId;
+  int setNumero;
+  int pA;
+  int pB;
+  int tA;
+  int tB;
+  List<String> posA;
+  List<String> posB;
+  Map<String, dynamic> subA;
+  Map<String, dynamic> subB;
+  bool ladoInvertido;
+  bool cambioHecho;
+  int accSetsFA;
+  int accSetsFB;
+  List<String> accParciales;
+  List<Map<String, dynamic>> accSanciones;
+  List<String> accJugA;
+  List<String> accJugB;
+  List<int> accTiemposA;
+  List<int> accTiemposB;
+  List<int> accCambiosA;
+  List<int> accCambiosB;
+  String ladoAOrig;
+  String ladoBOrig;
+  String saqueOrig;
+  List<String> titA;
+  List<String> titB;
+
+  PausaPartido({
+    required this.torneoId,
+    required this.matchId,
+    required this.ladoAId,
+    required this.ladoBId,
+    required this.sacaId,
+    required this.setNumero,
+    required this.pA,
+    required this.pB,
+    required this.tA,
+    required this.tB,
+    required this.posA,
+    required this.posB,
+    required this.subA,
+    required this.subB,
+    required this.ladoInvertido,
+    required this.cambioHecho,
+    required this.accSetsFA,
+    required this.accSetsFB,
+    required this.accParciales,
+    required this.accSanciones,
+    required this.accJugA,
+    required this.accJugB,
+    required this.accTiemposA,
+    required this.accTiemposB,
+    required this.accCambiosA,
+    required this.accCambiosB,
+    required this.ladoAOrig,
+    required this.ladoBOrig,
+    required this.saqueOrig,
+    List<String>? titA,
+    List<String>? titB,
+  })  : titA = titA ?? [],
+        titB = titB ?? [];
+
+  Map<String, dynamic> toJson() => {
+        'torneoId': torneoId,
+        'matchId': matchId,
+        'ladoAId': ladoAId,
+        'ladoBId': ladoBId,
+        'sacaId': sacaId,
+        'setNumero': setNumero,
+        'pA': pA,
+        'pB': pB,
+        'tA': tA,
+        'tB': tB,
+        'posA': posA,
+        'posB': posB,
+        'subA': subA,
+        'subB': subB,
+        'ladoInvertido': ladoInvertido,
+        'cambioHecho': cambioHecho,
+        'accSetsFA': accSetsFA,
+        'accSetsFB': accSetsFB,
+        'accParciales': accParciales,
+        'accSanciones': accSanciones,
+        'accJugA': accJugA,
+        'accJugB': accJugB,
+        'accTiemposA': accTiemposA,
+        'accTiemposB': accTiemposB,
+        'accCambiosA': accCambiosA,
+        'accCambiosB': accCambiosB,
+        'ladoAOrig': ladoAOrig,
+        'ladoBOrig': ladoBOrig,
+        'saqueOrig': saqueOrig,
+        'titA': titA,
+        'titB': titB,
+      };
+  factory PausaPartido.fromJson(Map<String, dynamic> j) => PausaPartido(
+        torneoId: j['torneoId'] as String,
+        matchId: j['matchId'] as String,
+        ladoAId: j['ladoAId'] as String,
+        ladoBId: j['ladoBId'] as String,
+        sacaId: j['sacaId'] as String,
+        setNumero: (j['setNumero'] ?? 1) as int,
+        pA: (j['pA'] ?? 0) as int,
+        pB: (j['pB'] ?? 0) as int,
+        tA: (j['tA'] ?? 0) as int,
+        tB: (j['tB'] ?? 0) as int,
+        posA: ((j['posA'] ?? []) as List).map((e) => '$e').toList(),
+        posB: ((j['posB'] ?? []) as List).map((e) => '$e').toList(),
+        subA: Map<String, dynamic>.from(j['subA'] ?? {}),
+        subB: Map<String, dynamic>.from(j['subB'] ?? {}),
+        ladoInvertido: (j['ladoInvertido'] ?? false) as bool,
+        cambioHecho: (j['cambioHecho'] ?? false) as bool,
+        accSetsFA: (j['accSetsFA'] ?? 0) as int,
+        accSetsFB: (j['accSetsFB'] ?? 0) as int,
+        accParciales:
+            ((j['accParciales'] ?? []) as List).map((e) => '$e').toList(),
+        accSanciones: ((j['accSanciones'] ?? []) as List)
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList(),
+        accJugA: ((j['accJugA'] ?? []) as List).map((e) => '$e').toList(),
+        accJugB: ((j['accJugB'] ?? []) as List).map((e) => '$e').toList(),
+        accTiemposA: ((j['accTiemposA'] ?? []) as List)
+            .map((e) => (e as num).toInt())
+            .toList(),
+        accTiemposB: ((j['accTiemposB'] ?? []) as List)
+            .map((e) => (e as num).toInt())
+            .toList(),
+        accCambiosA: ((j['accCambiosA'] ?? []) as List)
+            .map((e) => (e as num).toInt())
+            .toList(),
+        accCambiosB: ((j['accCambiosB'] ?? []) as List)
+            .map((e) => (e as num).toInt())
+            .toList(),
+        ladoAOrig: (j['ladoAOrig'] ?? j['ladoAId']) as String,
+        ladoBOrig: (j['ladoBOrig'] ?? j['ladoBId']) as String,
+        saqueOrig: (j['saqueOrig'] ?? j['sacaId']) as String,
+        titA: ((j['titA'] ?? j['posA'] ?? []) as List)
+            .map((e) => '$e')
+            .toList(),
+        titB: ((j['titB'] ?? j['posB'] ?? []) as List)
+            .map((e) => '$e')
+            .toList(),
       );
 }
 
@@ -261,6 +458,7 @@ class Tournament {
   List<Match> fixture;
   List<MatchResult> resultados;
   String creado;
+  List<String> bajas;
 
   Tournament({
     String? id,
@@ -271,11 +469,15 @@ class Tournament {
     List<Match>? fixture,
     List<MatchResult>? resultados,
     String? creado,
+    List<String>? bajas,
   })  : id = id ?? newId(),
         equipos = equipos ?? [],
         fixture = fixture ?? [],
         resultados = resultados ?? [],
-        creado = creado ?? DateTime.now().toIso8601String();
+        creado = creado ?? DateTime.now().toIso8601String(),
+        bajas = bajas ?? [];
+
+  bool estaDeBaja(String equipoId) => bajas.contains(equipoId);
 
   String nombreEquipo(String id) {
     final t = equipos.where((e) => e.id == id).toList();
@@ -300,6 +502,7 @@ class Tournament {
         'fixture': fixture.map((e) => e.toJson()).toList(),
         'resultados': resultados.map((e) => e.toJson()).toList(),
         'creado': creado,
+        'bajas': bajas,
       };
   factory Tournament.fromJson(Map<String, dynamic> j) => Tournament(
         id: j['id'] as String?,
@@ -316,6 +519,8 @@ class Tournament {
             .map((e) => MatchResult.fromJson(Map<String, dynamic>.from(e)))
             .toList(),
         creado: j['creado'] as String?,
+        bajas:
+            ((j['bajas'] ?? []) as List).map((e) => '$e').toList(),
       );
 }
 
