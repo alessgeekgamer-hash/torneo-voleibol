@@ -833,15 +833,24 @@ class _State extends State<LiveGameScreen> {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(8),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              mitadIzq(idIzq),
-              Container(width: 10, height: 340, color: Colors.black),
-              mitadDer(idDer),
-            ],
+        child: LayoutBuilder(
+          builder: (ctx, constraints) => SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: ConstrainedBox(
+              constraints:
+                  BoxConstraints(minWidth: constraints.maxWidth),
+              child: Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    mitadIzq(idIzq),
+                    Container(
+                        width: 10, height: 340, color: Colors.black),
+                    mitadDer(idDer),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ),
