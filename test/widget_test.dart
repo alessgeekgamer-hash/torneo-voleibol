@@ -9,6 +9,6 @@ void main() {
     await tester.pumpWidget(
         ChangeNotifierProvider.value(value: store, child: const App()));
     await tester.pump();
-    expect(find.text('Control de Torneo de Voleibol'), findsOneWidget);
+    expect(find.textContaining('Tournament Control'), findsOneWidget);
   });
 }

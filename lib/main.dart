@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'store.dart';
+import 'theme.dart';
 import 'screens/home.dart';
 
 void main() async {
@@ -19,14 +20,8 @@ class App extends StatelessWidget {
       title: 'Voleyball Tournament Control',
       debugShowCheckedModeBanner: false,
       themeMode: store.oscuro ? ThemeMode.dark : ThemeMode.light,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData.dark(useMaterial3: true).copyWith(
-        colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.teal, brightness: Brightness.dark),
-      ),
+      theme: voleyLight(),
+      darkTheme: voleyDark(),
       home: const HomeScreen(),
     );
   }
