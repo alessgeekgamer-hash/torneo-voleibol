@@ -6,6 +6,7 @@ import 'fixture_screen.dart';
 import 'jornada_screen.dart';
 import 'stats_screens.dart';
 import 'edit_tournament_screen.dart';
+import 'server_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   final String torneoId;
@@ -49,6 +50,11 @@ class DashboardScreen extends StatelessWidget {
           [VoleyColors.pink, VoleyColors.orange], () {
         Navigator.push(context,
             MaterialPageRoute(builder: (_) => EditTournamentScreen(torneoId: torneoId)));
+      }),
+      _Item('Ver en red', 'Tailscale • navegador', Icons.vpn_lock,
+          [VoleyColors.navy, VoleyColors.teal], () {
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const ServerScreen()));
       }),
     ];
     return Scaffold(

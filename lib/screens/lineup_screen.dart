@@ -36,9 +36,59 @@ class LineupScreen extends StatefulWidget {
 class _State extends State<LineupScreen> {
   String? selA1, selA2, selA3, selA4, selA5, selA6;
   String? selB1, selB2, selB3, selB4, selB5, selB6;
+  // Controladores para escribir el número directo por posición.
+  final Map<String, TextEditingController> _numCtrl = {};
 
   List<Player> conNumero(Team t) =>
       t.jugadores.where((j) => j.numero != null).toList();
+
+  @override
+  void dispose() {
+    for (final c in _numCtrl.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  String? _get(bool arriba, int p) => arriba ? _getA(p) : _getB(p);
+  void _set(bool arriba, int p, String? v) {
+    if (arriba) {
+      _setA(p, v);
+    } else {
+      _setB(p, v);
+    }
+  }
+
+  List<String?> _vals(bool arriba) => arriba
+      ? [selA1, selA2, selA3, selA4, selA5, selA6]
+      : [selB1, selB2, selB3, selB4, selB5, selB6];
+
+  /// Escribe el número y lo liga con el jugador registrado con ese número.
+  void _porNumero(bool arriba, int pos, String txt, List<Player> jugadores) {
+    final n = int.tryParse(txt.trim());
+    if (n == null) return;
+    Player? cand;
+    for (final j in jugadores) {
+      if (j.numero == n) {
+        cand = j;
+        break;
+      }
+    }
+    if (cand == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Ningún jugador registrado con el #$n')));
+      return;
+    }
+    final otros = _vals(arriba).whereType<String>().toSet()
+      ..remove(_get(arriba, pos));
+    if (otros.contains(cand.id)) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              '#$n (${cand.nombreCompleto}) ya está en otra posición')));
+      return;
+    }
+    setState(() => _set(arriba, pos, cand!.id));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -156,23 +206,58 @@ class _State extends State<LineupScreen> {
                 final disponibles = jugadores
                     .where((j) => !otros.contains(j.id))
                     .toList();
-                return DropdownButtonFormField<String>(
-                  decoration:
-                      InputDecoration(labelText: 'Posición $pos'),
-                  value: actual,
-                  items: disponibles
-                      .map((j) => DropdownMenuItem(
-                          value: j.id,
-                          child: Text(
-                              '#${j.numero} ${j.nombreCompleto}')))
-                      .toList(),
-                  onChanged: (v) => setState(() {
-                    if (esArriba) {
-                      _setA(pos, v);
-                    } else {
-                      _setB(pos, v);
-                    }
-                  }),
+                // Sincroniza el campo de número con la selección actual
+                // (solo cuando el usuario no lo está editando).
+                final key = '${esArriba ? 'A' : 'B'}$pos';
+                final nc = _numCtrl.putIfAbsent(
+                    key, () => TextEditingController());
+                return Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        decoration: InputDecoration(
+                            labelText: 'Posición $pos'),
+                        value: actual,
+                        items: disponibles
+                            .map((j) => DropdownMenuItem(
+                                value: j.id,
+                                child: Text(
+                                    '#${j.numero} ${j.nombreCompleto}')))
+                            .toList(),
+                        onChanged: (v) => setState(() {
+                          if (esArriba) {
+                            _setA(pos, v);
+                          } else {
+                            _setB(pos, v);
+                          }
+                          if (v != null) {
+                            for (final j in jugadores) {
+                              if (j.id == v) {
+                                nc.text =
+                                    j.numero?.toString() ?? '';
+                                break;
+                              }
+                            }
+                          } else {
+                            nc.clear();
+                          }
+                        }),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 72,
+                      child: TextField(
+                        controller: nc,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                            labelText: '#',
+                            border: OutlineInputBorder()),
+                        onChanged: (txt) =>
+                            _porNumero(esArriba, pos, txt, jugadores),
+                      ),
+                    ),
+                  ],
                 );
               }),
           ],
