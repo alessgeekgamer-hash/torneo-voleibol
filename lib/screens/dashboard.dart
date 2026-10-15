@@ -105,7 +105,7 @@ class DashboardScreen extends StatelessWidget {
                 crossAxisCount: 2,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
-                childAspectRatio: 0.95,
+                childAspectRatio: 0.72,
               ),
               itemCount: items.length,
               itemBuilder: (c, i) {
@@ -132,31 +132,38 @@ class DashboardScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: Colors.white
-                                    .withValues(alpha: 0.25),
-                                borderRadius:
-                                    BorderRadius.circular(14),
-                              ),
-                              child: Icon(it.icon,
-                                  color: Colors.white, size: 30),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color:
+                                Colors.white.withValues(alpha: 0.25),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Icon(it.icon,
+                              color: Colors.white, size: 26),
+                        ),
+                        const SizedBox(height: 6),
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.black
+                                  .withValues(alpha: 0.30),
+                              borderRadius:
+                                  BorderRadius.circular(20),
                             ),
-                            const Spacer(),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(14),
+                            child: ClipRRect(
+                              borderRadius:
+                                  BorderRadius.circular(12),
                               child: Image.asset(it.imagen,
-                                  width: 72,
-                                  height: 72,
+                                  width: 88,
+                                  height: 88,
                                   fit: BoxFit.contain,
                                   errorBuilder: (_, __, ___) =>
-                                      const SizedBox(width: 72)),
+                                      const SizedBox(
+                                          width: 88, height: 88)),
                             ),
-                          ],
+                          ),
                         ),
                         const Spacer(),
                         Text(it.titulo,
