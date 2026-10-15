@@ -86,6 +86,8 @@ class _State extends State<RosterScreen> {
                 return;
               }
               store.persistir();
+              // ignore: unawaited_futures
+              store.sincronizar();
               _pedirFechaLugar(context, store, t, m);
             },
             ),

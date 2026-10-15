@@ -16,6 +16,8 @@ class ServerScreen extends StatefulWidget {
 class _State extends State<ServerScreen> {
   List<String> _ips = [];
   final _port = TextEditingController(text: '8080');
+  final _url = TextEditingController();
+  bool _ocupado = false;
 
   @override
   void initState() {
@@ -31,6 +33,9 @@ class _State extends State<ServerScreen> {
   @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
+    if (_url.text.isEmpty && store.serverUrl.isNotEmpty) {
+      _url.text = store.serverUrl;
+    }
     return ListenableBuilder(
       listenable: ResultsServer.instance,
       builder: (c, _) {
@@ -134,6 +139,114 @@ class _State extends State<ServerScreen> {
                   'En Windows permite el puerto en el firewall la primera vez. '
                   'La página se actualiza sola cada 20 segundos.',
                   style: TextStyle(fontSize: 12, color: Colors.grey)),
+              const Divider(height: 28),
+              const Text('Control en dos equipos a la vez',
+                  style:
+                      TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Text(
+                      'Un equipo es la central (enciende su servidor arriba). '
+                      'El otro se conecta aquí con la IP de la central:\n'
+                      '• Descargar trae los torneos y resultados a este equipo.\n'
+                      '• Al guardar un resultado se envía solo a la central.\n'
+                      '• Cada equipo registra partidos DISTINTOS al mismo tiempo; '
+                      'al sincronizar se unen. Si el mismo partido se guarda '
+                      'en ambos, gana el más reciente.'),
+                ),
+              ),
+              TextField(
+                controller: _url,
+                keyboardType: TextInputType.url,
+                decoration: const InputDecoration(
+                    labelText: 'Central (ej. http://100.90.1.5:8080)',
+                    border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 8),
+              if (store.serverUrl.isNotEmpty)
+                Text('Central guardada: ${store.serverUrl}',
+                    style: const TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.download),
+                    label: const Text('Descargar'),
+                    onPressed: _ocupado
+                        ? null
+                        : () async {
+                            final store2 = context.read<AppStore>();
+                            await store2.setServerUrl(_url.text);
+                            setState(() => _ocupado = true);
+                            try {
+                              final msg = await store2
+                                  .descargarDe(_url.text);
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(
+                                      SnackBar(content: Text(msg)));
+                            } catch (e) {
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(SnackBar(
+                                      content: Text(
+                                          'No se pudo descargar: $e')));
+                            } finally {
+                              if (mounted) {
+                                setState(() => _ocupado = false);
+                              }
+                            }
+                          },
+                  ),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.sync),
+                    label: const Text('Sincronizar ahora'),
+                    onPressed: _ocupado
+                        ? null
+                        : () async {
+                            final store2 = context.read<AppStore>();
+                            await store2.setServerUrl(_url.text);
+                            setState(() => _ocupado = true);
+                            try {
+                              final msg =
+                                  await store2.sincronizar();
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(
+                                      SnackBar(content: Text(msg)));
+                            } catch (e) {
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(SnackBar(
+                                      content: Text(
+                                          'No se pudo sincronizar: $e')));
+                            } finally {
+                              if (mounted) {
+                                setState(() => _ocupado = false);
+                              }
+                            }
+                          },
+                  ),
+                  TextButton(
+                    child: const Text('Olvidar central'),
+                    onPressed: () async {
+                      await context
+                          .read<AppStore>()
+                          .setServerUrl('');
+                      _url.clear();
+                    },
+                  ),
+                ],
+              ),
+              if (_ocupado)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: LinearProgressIndicator(),
+                ),
             ],
           ),
         ),

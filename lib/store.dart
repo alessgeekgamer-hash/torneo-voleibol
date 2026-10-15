@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'models.dart';
@@ -18,6 +20,7 @@ class AppStore extends ChangeNotifier {
   bool oscuro = false;
   bool _cargado = false;
   Map<String, PausaPartido> pausas = {};
+  String serverUrl = '';
 
   String _pausaKey(String torneoId, String matchId) => '${torneoId}_$matchId';
 
@@ -25,6 +28,7 @@ class AppStore extends ChangeNotifier {
     if (_cargado) return;
     final p = await SharedPreferences.getInstance();
     oscuro = p.getBool('oscuro') ?? false;
+    serverUrl = p.getString('centralUrl') ?? '';
     final raw = p.getString('torneos');
     if (raw != null && raw.isNotEmpty) {
       try {
@@ -34,8 +38,7 @@ class AppStore extends ChangeNotifier {
         torneos = list;
       } catch (_) {}
     }
-    final rawP = p.getString('pausas');
-    if (rawP != null && rawP.isNotEmpty) {
+    final rawP = p.getString('pausas');    if (rawP != null && rawP.isNotEmpty) {
       try {
         final m = Map<String, dynamic>.from(jsonDecode(rawP));
         pausas = m.map((k, v) =>
@@ -51,6 +54,7 @@ class AppStore extends ChangeNotifier {
     await p.setString(
         'torneos', jsonEncode(torneos.map((e) => e.toJson()).toList()));
     await p.setBool('oscuro', oscuro);
+    await p.setString('centralUrl', serverUrl);
     await p.setString(
         'pausas', jsonEncode(pausas.map((k, v) => MapEntry(k, v.toJson()))));
   }
@@ -142,7 +146,8 @@ class AppStore extends ChangeNotifier {
   }
 
   Future<void> guardarResultado(
-      Tournament t, Match match, MatchResult r) async {
+      Tournament t, Match match, MatchResult r,
+      {bool replicar = true}) async {
     t.resultados.removeWhere((e) => e.matchId == match.id);
     // si ya existía resultado para otro emparejamiento duplicado, se mantiene
     t.resultados.add(r);
@@ -153,6 +158,154 @@ class AppStore extends ChangeNotifier {
     final nuevos = avanzarDirecta(t);
     t.fixture.addAll(nuevos);
     await persistir();
+    // Replica al equipo central si hay conexión configurada.
+    if (replicar) unawaited(sincronizar());
+  }
+
+  Future<void> setServerUrl(String url) async {
+    serverUrl = url.trim().replaceAll(RegExp(r'/+$'), '');
+    await persistir();
+  }
+
+  /// Fusiona un torneo remoto en el local (unión por id; en resultados
+  /// del mismo partido gana el más reciente). Devuelve conteos.
+  Map<String, int> fusionarTorneo(Tournament remoto) {
+    var equiposNuevos = 0;
+    var resultadosNuevos = 0;
+    var local = porId(remoto.id);
+    if (local == null) {
+      torneos.add(remoto);
+      notifyListeners();
+      return {
+        'equipos': remoto.equipos.length,
+        'resultados': remoto.resultados.length
+      };
+    }
+    for (final eq in remoto.equipos) {
+      final le = local.equipoPorId(eq.id);
+      if (le == null) {
+        local.equipos.add(eq);
+        equiposNuevos++;
+      } else {
+        // Jugadores nuevos o actualizados (p. ej. números tardíos).
+        for (final j in eq.jugadores) {
+          final lj = le.jugadores.where((e) => e.id == j.id).toList();
+          if (lj.isEmpty) {
+            le.jugadores.add(j);
+          } else {
+            lj.first.nombre = j.nombre;
+            lj.first.apellido = j.apellido;
+            lj.first.fechaNacimiento = j.fechaNacimiento;
+            lj.first.telefono = j.telefono;
+            lj.first.numero ??= j.numero;
+            if (j.numero != null) lj.first.numero = j.numero;
+            lj.first.fotoPath ??= j.fotoPath;
+          }
+        }
+      }
+    }
+    for (final m in remoto.fixture) {
+      if (!local.fixture.any((e) => e.id == m.id)) {
+        local.fixture.add(m);
+      }
+    }
+    for (final b in remoto.bajas) {
+      if (!local.bajas.contains(b)) local.bajas.add(b);
+    }
+    for (final r in remoto.resultados) {
+      final idx =
+          local.resultados.indexWhere((e) => e.matchId == r.matchId);
+      if (idx < 0) {
+        local.resultados.add(r);
+        resultadosNuevos++;
+        try {
+          final match =
+              local.fixture.firstWhere((e) => e.id == r.matchId);
+          match.jugado = true;
+          match.programado = false;
+        } catch (_) {}
+      } else if (r.fecha.compareTo(local.resultados[idx].fecha) > 0) {
+        local.resultados[idx] = r;
+        resultadosNuevos++;
+      }
+    }
+    final nuevos = avanzarDirecta(local);
+    // Solo agrega rondas que no existan.
+    for (final n in nuevos) {
+      if (!local.fixture.any((e) => e.id == n.id)) {
+        local.fixture.add(n);
+      }
+    }
+    notifyListeners();
+    return {'equipos': equiposNuevos, 'resultados': resultadosNuevos};
+  }
+
+  /// Descarga los torneos del equipo central y los fusiona aquí.
+  Future<String> descargarDe(String base) async {
+    final url = '${_base(base)}/api/torneos';
+    final data = await _getJson(url);
+    final lista = (data['torneos'] ?? []) as List;
+    var t = 0, e = 0, r = 0;
+    for (final raw in lista) {
+      final remoto =
+          Tournament.fromJson(Map<String, dynamic>.from(raw));
+      final c = fusionarTorneo(remoto);
+      t++;
+      e += c['equipos']!;
+      r += c['resultados']!;
+    }
+    await persistir();
+    return 'Descargados $t torneos ($e equipos, $r resultados nuevos)';
+  }
+
+  /// Envía mis torneos al equipo central para fusionarlos allá.
+  Future<String> sincronizar() async {
+    if (serverUrl.isEmpty) return 'Sin central configurada';
+    final url = '$serverUrl/api/sync';
+    final data = await _postJson(url, {
+      'torneos': torneos.map((e) => e.toJson()).toList(),
+    });
+    if (data['ok'] == true) {
+      return 'Sincronizado: ${data['resultadosNuevos'] ?? 0} resultados nuevos en la central';
+    }
+    return 'La central respondió con error';
+  }
+
+  String _base(String b) => b.trim().replaceAll(RegExp(r'/+$'), '');
+
+  Future<Map<String, dynamic>> _getJson(String url) async {
+    final client = HttpClient();
+    client.connectionTimeout = const Duration(seconds: 10);
+    try {
+      final req = await client.getUrl(Uri.parse(url));
+      final res = await req.close().timeout(const Duration(seconds: 15));
+      final body = await res.transform(utf8.decoder).join();
+      if (res.statusCode != 200) {
+        throw 'HTTP ${res.statusCode}';
+      }
+      return Map<String, dynamic>.from(jsonDecode(body));
+    } finally {
+      client.close();
+    }
+  }
+
+  Future<Map<String, dynamic>> _postJson(
+      String url, Map<String, dynamic> payload) async {
+    final client = HttpClient();
+    client.connectionTimeout = const Duration(seconds: 10);
+    try {
+      final req = await client.postUrl(Uri.parse(url));
+      req.headers.contentType = ContentType.json;
+      req.write(jsonEncode(payload));
+      final res = await req.close().timeout(const Duration(seconds: 20));
+      final body = await res.transform(utf8.decoder).join();
+      if (res.statusCode != 200) {
+        throw 'HTTP ${res.statusCode}: $body';
+      }
+      return Map<String, dynamic>.from(jsonDecode(body));
+    } finally {
+      client.close();
+    }
   }
 
   PausaPartido? pausaDe(String torneoId, String matchId) =>

@@ -65,6 +65,12 @@ class ResultsServer extends ChangeNotifier {
     return (Request req) async {
       try {
         final segs = req.url.pathSegments;
+        if (req.method == 'POST' &&
+            segs.length == 2 &&
+            segs[0] == 'api' &&
+            segs[1] == 'sync') {
+          return _sync(store, await req.readAsString());
+        }
         if (segs.isEmpty) return _html(_indexHtml(store));
         if (segs.length == 1 && segs[0] == 'api') {
           return _html(_indexHtml(store));
@@ -85,6 +91,38 @@ class ResultsServer extends ChangeNotifier {
         return Response.internalServerError(body: 'Error: $e');
       }
     };
+  }
+
+  /// Recibe torneos de otro dispositivo y los fusiona (para llevar el
+  /// control en dos equipos a la vez: cada uno registra partidos
+  /// distintos y al sincronizar se unen sin duplicar).
+  Future<Response> _sync(AppStore store, String body) async {
+    try {
+      final data = jsonDecode(body) as Map<String, dynamic>;
+      final lista = (data['torneos'] ?? []) as List;
+      var equipos = 0, resultados = 0, torneos = 0;
+      for (final raw in lista) {
+        final remoto =
+            Tournament.fromJson(Map<String, dynamic>.from(raw));
+        final r = store.fusionarTorneo(remoto);
+        torneos++;
+        equipos += r['equipos'] as int;
+        resultados += r['resultados'] as int;
+      }
+      await store.persistir();
+      return Response.ok(
+          jsonEncode({
+            'ok': true,
+            'torneos': torneos,
+            'equiposNuevos': equipos,
+            'resultadosNuevos': resultados,
+          }),
+          headers: {'content-type': 'application/json; charset=utf-8'});
+    } catch (e) {
+      return Response.internalServerError(
+          body: jsonEncode({'ok': false, 'error': '$e'}),
+          headers: {'content-type': 'application/json; charset=utf-8'});
+    }
   }
 
   Response _html(String body) => Response.ok(body,
