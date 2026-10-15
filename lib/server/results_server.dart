@@ -129,32 +129,25 @@ class ResultsServer extends ChangeNotifier {
       headers: {'content-type': 'text/html; charset=utf-8'});
 
   Map<String, dynamic> _json(AppStore store) => {
-        'torneos': store.torneos
-            .map((t) => {
-                  'id': t.id,
-                  'nombre': t.nombre,
-                  'formato': formatoLabel(t.formato),
-                  'sistema': sistemaLabel(t.sistema),
-                  'equipos': t.equipos
-                      .map((e) =>
-                          {'id': e.id, 'nombre': e.nombre, 'baja': t.estaDeBaja(e.id)})
-                      .toList(),
-                  'resultados': t.resultados.map((r) => r.toJson()).toList(),
-                  'posiciones': store
-                      .posiciones(t)
-                      .map((s) => {
-                            'equipo': t.nombreEquipo(s.equipoId),
-                            'pj': s.pj,
-                            'pg': s.pg,
-                            'pp': s.pp,
-                            'sf': s.sf,
-                            'sc': s.sc,
-                            'pf': s.pf,
-                            'pc': s.pc,
-                          })
-                      .toList(),
-                })
-            .toList(),
+        // Se envía el torneo completo (mismo formato que el guardado local)
+        // más las posiciones calculadas.
+        'torneos': store.torneos.map((t) {
+          final j = t.toJson();
+          j['posiciones'] = store
+              .posiciones(t)
+              .map((s) => {
+                    'equipo': t.nombreEquipo(s.equipoId),
+                    'pj': s.pj,
+                    'pg': s.pg,
+                    'pp': s.pp,
+                    'sf': s.sf,
+                    'sc': s.sc,
+                    'pf': s.pf,
+                    'pc': s.pc,
+                  })
+              .toList();
+          return j;
+        }).toList(),
       };
 
 }
@@ -202,7 +195,9 @@ String _torneoHtml(AppStore store, String id) {
   final b = StringBuffer();
   b.write('<p><a href="/">← Todos los torneos</a></p>');
   b.write('<div class="card"><h2>${_esc(t.nombre)} '
-      '<span class="badge">${t.resultados.length} jugados</span></h2>');
+      '<span class="badge">${t.resultados.length} jugados</span></h2>'
+      '<p>${_esc(formatoLabel(t.formato))} • '
+      '${_esc(sistemaLabel(t.sistema))}</p>');
   b.write('<table><tr><th>#</th><th>Equipo</th><th>PJ</th><th>PG</th>'
       '<th>PP</th><th>SF-SC</th><th>PF-PC</th></tr>');
   for (var i = 0; i < pos.length; i++) {

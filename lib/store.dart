@@ -159,7 +159,9 @@ class AppStore extends ChangeNotifier {
     t.fixture.addAll(nuevos);
     await persistir();
     // Replica al equipo central si hay conexión configurada.
-    if (replicar) unawaited(sincronizar());
+    if (replicar && serverUrl.isNotEmpty) {
+      unawaited(sincronizar().then((_) {}).catchError((_) {}));
+    }
   }
 
   Future<void> setServerUrl(String url) async {
@@ -242,7 +244,7 @@ class AppStore extends ChangeNotifier {
 
   /// Descarga los torneos del equipo central y los fusiona aquí.
   Future<String> descargarDe(String base) async {
-    final url = '${_base(base)}/api/torneos';
+    final url = '${normalizarUrl(base)}/api/torneos';
     final data = await _getJson(url);
     final lista = (data['torneos'] ?? []) as List;
     var t = 0, e = 0, r = 0;
@@ -260,8 +262,10 @@ class AppStore extends ChangeNotifier {
 
   /// Envía mis torneos al equipo central para fusionarlos allá.
   Future<String> sincronizar() async {
-    if (serverUrl.isEmpty) return 'Sin central configurada';
-    final url = '$serverUrl/api/sync';
+    if (serverUrl.isEmpty) {
+      throw 'Escribe primero la dirección de la central';
+    }
+    final url = '${normalizarUrl(serverUrl)}/api/sync';
     final data = await _postJson(url, {
       'torneos': torneos.map((e) => e.toJson()).toList(),
     });
@@ -271,7 +275,22 @@ class AppStore extends ChangeNotifier {
     return 'La central respondió con error';
   }
 
-  String _base(String b) => b.trim().replaceAll(RegExp(r'/+$'), '');
+  /// Normaliza y valida la dirección de la central. Acepta con o sin
+  /// http:// y avisa en claro si está vacía o mal escrita.
+  String normalizarUrl(String b) {
+    var u = b.trim();
+    if (u.isEmpty) {
+      throw 'Escribe la dirección de la central (ej. http://100.90.1.5:8080)';
+    }
+    if (!u.contains('://')) u = 'http://$u';
+    final uri = Uri.tryParse(u);
+    if (uri == null || uri.host.isEmpty) {
+      throw 'Dirección inválida: "$b". Usa el formato http://IP:PUERTO';
+    }
+    return u.replaceAll(RegExp(r'/+$'), '');
+  }
+
+  String _base(String b) => normalizarUrl(b);
 
   Future<Map<String, dynamic>> _getJson(String url) async {
     final client = HttpClient();
