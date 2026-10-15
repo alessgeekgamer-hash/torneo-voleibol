@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models.dart';
+import '../responsive.dart';
 import '../store.dart';
 import '../rules.dart';
 import 'side_serve_screen.dart';
@@ -559,6 +560,8 @@ class _State extends State<LiveGameScreen> {
     final pDer = izqEsA ? pB : pA;
     final setsIzq = _setsDe(idIzq);
     final setsDer = _setsDe(idDer);
+    // En tableta/pantalla amplia: marcadores a los lados de la cancha.
+    final amplio = Resp.esAmplio(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -582,19 +585,34 @@ class _State extends State<LiveGameScreen> {
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 16)),
           const SizedBox(height: 8),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: _marcador(idIzq, pIzq)),
-              const Padding(
-                padding: EdgeInsets.only(top: 60),
-                child: Text(':', style: TextStyle(fontSize: 60)),
-              ),
-              Expanded(child: _marcador(idDer, pDer)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _cancha(),
+          if (amplio)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: _marcador(idIzq, pIzq)),
+                Expanded(flex: 2, child: _cancha()),
+                Expanded(child: _marcador(idDer, pDer)),
+              ],
+            )
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: _marcador(idIzq, pIzq)),
+                Padding(
+                  padding: const EdgeInsets.only(top: 60),
+                  child: Text(':',
+                      style: TextStyle(
+                          fontSize:
+                              Resp.esAngosto(context) ? 40 : 60)),
+                ),
+                Expanded(child: _marcador(idDer, pDer)),
+              ],
+            ),
+          if (!amplio) ...[
+            const SizedBox(height: 8),
+            _cancha(),
+          ],
           const SizedBox(height: 8),
           _banca(),
           const SizedBox(height: 8),
@@ -635,7 +653,9 @@ class _State extends State<LiveGameScreen> {
     final paraA = teamId == widget.ladoAId;
     final tiempos = paraA ? tA : tB;
     final cambios = paraA ? subA.usadas : subB.usadas;
-    final angosto = MediaQuery.sizeOf(context).width < 420;
+    final w = MediaQuery.sizeOf(context).width;
+    final angosto = w < Resp.telefono;
+    final scoreSize = angosto ? 76.0 : (w >= Resp.amplio ? 120.0 : 96.0);
     return Column(
       children: [
         Text(_nombre(teamId),
@@ -654,7 +674,7 @@ class _State extends State<LiveGameScreen> {
             fit: BoxFit.scaleDown,
             child: Text('$pts',
                 style: TextStyle(
-                    fontSize: angosto ? 76 : 112,
+                    fontSize: scoreSize,
                     fontWeight: FontWeight.w900,
                     color: Colors.black)),
           ),
@@ -733,12 +753,14 @@ class _State extends State<LiveGameScreen> {
   /// Cancha naranja con líneas blancas, red negra y línea de ataque
   /// a 1/3 de la red hacia la zona zaguera (separa delanteros/zagueros).
   Widget _cancha() {
-    // Medidas responsivas para que no se empalme en celulares angostos.
-    final angosto = MediaQuery.sizeOf(context).width < 420;
-    final double cell = angosto ? 54 : 72;
+    // Medidas responsivas: compactas en celular, amplias en tableta.
+    final w = MediaQuery.sizeOf(context).width;
+    final angosto = w < Resp.telefono;
+    final amplio = w >= Resp.amplio;
+    final double cell = angosto ? 54 : (amplio ? 84 : 72);
     final double marg = angosto ? 6 : 12;
-    final double backW = angosto ? 150 : 220;
-    final double frontW = angosto ? 84 : 110;
+    final double backW = angosto ? 150 : (amplio ? 260 : 220);
+    final double frontW = angosto ? 84 : (amplio ? 130 : 110);
     final double netH = 3 * (cell + marg * 2) + 60;
     Widget celda(String id, bool conSaque) {
       final num = _numeroJug(id)?.toString() ?? '?';

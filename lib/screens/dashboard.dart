@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../responsive.dart';
 import '../store.dart';
 import '../theme.dart';
 import 'fixture_screen.dart';
@@ -100,9 +101,8 @@ class DashboardScreen extends StatelessWidget {
           Expanded(
             child: LayoutBuilder(
               builder: (ctx, cons) {
-                // Columnas según el ancho: 2 en celular, más en pantallas grandes.
-                final cols =
-                    (cons.maxWidth ~/ 240).clamp(2, 4).toInt();
+                // Columnas según el ancho: 2 en celular, más en tableta.
+                final cols = Resp.cols(cons.maxWidth);
                 return GridView.builder(
                   padding: const EdgeInsets.all(16),
                   gridDelegate:

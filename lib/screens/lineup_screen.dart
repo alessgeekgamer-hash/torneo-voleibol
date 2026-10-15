@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models.dart';
+import '../responsive.dart';
 import '../store.dart';
 import 'live_game_screen.dart';
 
@@ -118,12 +119,17 @@ class _State extends State<LineupScreen> {
               'Arriba: ${eqArriba.nombre} (saque) • Abajo: ${eqAbajo.nombre} (recibe)',
               style: const TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          _bloque('Equipo ${eqArriba.nombre} (arriba)', eqArriba, true),
+          MaxWidth(
+              child: _bloque(
+                  'Equipo ${eqArriba.nombre} (arriba)', eqArriba, true)),
           const SizedBox(height: 8),
-          _bloque('Equipo ${eqAbajo.nombre} (abajo)', eqAbajo, false),
+          MaxWidth(
+              child: _bloque(
+                  'Equipo ${eqAbajo.nombre} (abajo)', eqAbajo, false)),
           const SizedBox(height: 12),
-          ElevatedButton(
-            onPressed: () {
+          MaxWidth(
+            child: ElevatedButton(
+              onPressed: () {
               // mapear a orden ladoA/ladoB reales
               List<String?> linA, linB;
               if (arribaEsA) {
@@ -174,6 +180,7 @@ class _State extends State<LineupScreen> {
                           )));
             },
             child: const Text('Continuar al juego'),
+            ),
           ),
         ],
       ),

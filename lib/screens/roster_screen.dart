@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models.dart';
+import '../responsive.dart';
 import '../store.dart';
 import 'side_serve_screen.dart';
 
@@ -45,12 +46,13 @@ class _State extends State<RosterScreen> {
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: [
-          _equipoBlock(context, store, t, eqA),
+          MaxWidth(child: _equipoBlock(context, store, t, eqA)),
           const SizedBox(height: 12),
-          _equipoBlock(context, store, t, eqB),
+          MaxWidth(child: _equipoBlock(context, store, t, eqB)),
           const SizedBox(height: 16),
-          ElevatedButton(
-            child: const Text('Guardar y elegir lado / saque'),
+          MaxWidth(
+            child: ElevatedButton(
+              child: const Text('Guardar y elegir lado / saque'),
             onPressed: () {
               // validar duplicados y guardar números en cédula temporal
               for (final eq in [eqA, eqB]) {
@@ -86,6 +88,7 @@ class _State extends State<RosterScreen> {
               store.persistir();
               _pedirFechaLugar(context, store, t, m);
             },
+            ),
           ),
         ],
       ),
