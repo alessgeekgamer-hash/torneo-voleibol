@@ -13,9 +13,10 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
     return Scaffold(
-      body: Column(
-        children: [
-          const VoleyHeader(
+      body: AppBg(
+        child: Column(
+          children: [
+            const VoleyHeader(
             title: 'Volleyball\nTournament Control',
             subtitle: 'Rol • Jornada en vivo • Stats • PDF',
           ),
@@ -163,6 +164,7 @@ class HomeScreen extends StatelessWidget {
                   ),
           ),
         ],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: VoleyColors.orange,

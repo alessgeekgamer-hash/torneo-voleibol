@@ -21,54 +21,56 @@ class DashboardScreen extends StatelessWidget {
     }
     final items = [
       _Item('Rol de juegos', 'Todos los partidos', Icons.list_alt,
-          [VoleyColors.teal, VoleyColors.blue], () {
+          [VoleyColors.teal, VoleyColors.blue], 'assets/menu/rol.png', () {
         store.asegurarFixture(t);
         Navigator.push(context,
             MaterialPageRoute(builder: (_) => FixtureScreen(torneoId: torneoId)));
       }),
       _Item('Jornada actual', 'A jugar hoy', Icons.play_circle_fill,
-          [VoleyColors.orange, VoleyColors.yellow], () {
+          [VoleyColors.orange, VoleyColors.yellow], 'assets/menu/jornada.png', () {
         Navigator.push(context,
             MaterialPageRoute(builder: (_) => JornadaScreen(torneoId: torneoId)));
       }),
       _Item('Estadísticas', 'PJ • PG • Sets • Pts', Icons.bar_chart,
-          [VoleyColors.violet, VoleyColors.pink], () {
+          [VoleyColors.violet, VoleyColors.pink], 'assets/menu/stats.png', () {
         Navigator.push(context,
             MaterialPageRoute(builder: (_) => StatsScreen(torneoId: torneoId)));
       }),
       _Item('Posiciones', 'Tabla del torneo', Icons.leaderboard,
-          [VoleyColors.green, VoleyColors.teal], () {
+          [VoleyColors.green, VoleyColors.teal], 'assets/menu/posiciones.png', () {
         Navigator.push(context,
             MaterialPageRoute(builder: (_) => StandingsScreen(torneoId: torneoId)));
       }),
       _Item('Historial', 'Resultados + PDF', Icons.history,
-          [VoleyColors.blue, VoleyColors.violet], () {
+          [VoleyColors.blue, VoleyColors.violet], 'assets/menu/historial.png', () {
         Navigator.push(context,
             MaterialPageRoute(builder: (_) => HistoryScreen(torneoId: torneoId)));
       }),
       _Item('Editar torneo', 'Equipos • cédula', Icons.edit,
-          [VoleyColors.pink, VoleyColors.orange], () {
+          [VoleyColors.pink, VoleyColors.orange], 'assets/menu/editar.png', () {
         Navigator.push(context,
             MaterialPageRoute(builder: (_) => EditTournamentScreen(torneoId: torneoId)));
       }),
       _Item('Ver en red', 'Tailscale • navegador', Icons.vpn_lock,
-          [VoleyColors.navy, VoleyColors.teal], () {
+          [VoleyColors.navy, VoleyColors.teal], 'assets/menu/red.png', () {
         Navigator.push(context,
             MaterialPageRoute(builder: (_) => const ServerScreen()));
       }),
     ];
     return Scaffold(
       appBar: AppBar(title: Text(t.nombre)),
-      body: Column(
-        children: [
-          Container(
-            margin: const EdgeInsets.fromLTRB(16, 14, 16, 4),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                  colors: [VoleyColors.navy, Color(0xFF134E5E)]),
-              borderRadius: BorderRadius.circular(18),
-            ),
+      body: AppBg(
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                    colors: [VoleyColors.navy, Color(0xFF134E5E)]),
+                borderRadius: BorderRadius.circular(18),
+              ),
             child: Row(
               children: [
                 const Text('🏐', style: TextStyle(fontSize: 30)),
@@ -130,15 +132,31 @@ class DashboardScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color:
-                                Colors.white.withValues(alpha: 0.25),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Icon(it.icon,
-                              color: Colors.white, size: 30),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white
+                                    .withValues(alpha: 0.25),
+                                borderRadius:
+                                    BorderRadius.circular(14),
+                              ),
+                              child: Icon(it.icon,
+                                  color: Colors.white, size: 30),
+                            ),
+                            const Spacer(),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: Image.asset(it.imagen,
+                                  width: 72,
+                                  height: 72,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (_, __, ___) =>
+                                      const SizedBox(width: 72)),
+                            ),
+                          ],
                         ),
                         const Spacer(),
                         Text(it.titulo,
@@ -159,6 +177,7 @@ class DashboardScreen extends StatelessWidget {
             ),
           ),
         ],
+        ),
       ),
     );
   }
@@ -169,6 +188,8 @@ class _Item {
   final String sub;
   final IconData icon;
   final List<Color> grad;
+  final String imagen;
   final VoidCallback fn;
-  _Item(this.titulo, this.sub, this.icon, this.grad, this.fn);
+  _Item(
+      this.titulo, this.sub, this.icon, this.grad, this.imagen, this.fn);
 }

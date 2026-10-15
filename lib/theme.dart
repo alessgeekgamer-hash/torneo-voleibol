@@ -143,8 +143,7 @@ class GradientButton extends StatelessWidget {
   }
 }
 
-class VoleyHeader extends StatelessWidget {
-  final String title;
+class VoleyHeader extends StatelessWidget {  final String title;
   final String subtitle;
   const VoleyHeader({super.key, required this.title, required this.subtitle});
 
@@ -225,6 +224,33 @@ class VoleyHeader extends StatelessWidget {
       child: Text(t,
           style: const TextStyle(
               fontSize: 11, fontWeight: FontWeight.bold, color: VoleyColors.navy)),
+    );
+  }
+}
+
+/// Fondo de la aplicación con la imagen de voleibol y un velo para legibilidad.
+class AppBg extends StatelessWidget {
+  final Widget child;
+  const AppBg({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final oscuro = Theme.of(context).brightness == Brightness.dark;
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Image.asset('assets/bg.jpg',
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const SizedBox()),
+        ),
+        Positioned.fill(
+          child: Container(
+              color: oscuro
+                  ? Colors.black.withValues(alpha: 0.80)
+                  : Colors.white.withValues(alpha: 0.82)),
+        ),
+        Positioned.fill(child: child),
+      ],
     );
   }
 }

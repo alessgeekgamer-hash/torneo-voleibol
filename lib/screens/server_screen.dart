@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../server/results_server.dart';
 import '../store.dart';
+import '../theme.dart';
 
 /// Pantalla para publicar los resultados en la red local / Tailscale
 /// y consultarlos desde otros dispositivos con su navegador.
@@ -36,9 +37,10 @@ class _State extends State<ServerScreen> {
         final srv = ResultsServer.instance;
         return Scaffold(
           appBar: AppBar(title: const Text('Ver en otros dispositivos')),
-          body: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
+          body: AppBg(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
               const Card(
                 child: Padding(
                   padding: EdgeInsets.all(12),
@@ -134,6 +136,7 @@ class _State extends State<ServerScreen> {
                   style: TextStyle(fontSize: 12, color: Colors.grey)),
             ],
           ),
+        ),
         );
       },
     );

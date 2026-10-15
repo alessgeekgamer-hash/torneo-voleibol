@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models.dart';
 import '../store.dart';
+import '../theme.dart';
 import 'roster_screen.dart';
 import 'live_game_screen.dart';
 import 'lineup_screen.dart';
@@ -67,12 +68,13 @@ class JornadaScreen extends StatelessWidget {
         .toList();
     return Scaffold(
       appBar: AppBar(title: const Text('Jornada actual')),
-      body: partidos.isEmpty
-          ? const Center(
-              child: Text(
-                  'No hay partidos programados.\nActívalos en Rol de juegos.',
-                  textAlign: TextAlign.center))
-          : ListView.builder(
+      body: AppBg(
+        child: partidos.isEmpty
+            ? const Center(
+                child: Text(
+                    'No hay partidos programados.\nActívalos en Rol de juegos.',
+                    textAlign: TextAlign.center))
+            : ListView.builder(
               padding: const EdgeInsets.all(12),
               itemCount: partidos.length,
               itemBuilder: (c, i) {
@@ -110,6 +112,7 @@ class JornadaScreen extends StatelessWidget {
                 );
               },
             ),
+      ),
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../store.dart';
 import '../logic_pdf.dart';
+import '../theme.dart';
 
 class StatsScreen extends StatelessWidget {
   final String torneoId;
@@ -20,9 +21,10 @@ class StatsScreen extends StatelessWidget {
               onPressed: () => exportarEstadisticas(t, stats))
         ],
       ),
-      body: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
+      body: AppBg(
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: DataTable(
           columns: const [
             DataColumn(label: Text('Equipo')),
             DataColumn(label: Text('PJ')),
@@ -50,6 +52,7 @@ class StatsScreen extends StatelessWidget {
                   ]))
               .toList(),
         ),
+        ),
       ),
     );
   }
@@ -72,24 +75,26 @@ class StandingsScreen extends StatelessWidget {
               onPressed: () => exportarPosiciones(t, pos))
         ],
       ),
-      body: ListView.builder(
-        itemCount: pos.length,
-        itemBuilder: (c, i) {
-          final s = pos[i];
-          return ListTile(
-            leading: CircleAvatar(child: Text('${i + 1}')),
-            title: Text(
-              t.nombreEquipo(s.equipoId),
-              style:
-                  const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text(
-              'PG:${s.pg}  PP:${s.pp}  PJ:${s.pj}\nSets ${s.sf}-${s.sc} (Dif ${s.difSets})  •  Pts ${s.pf}-${s.pc} (Dif ${s.difPuntos})',
-              style: const TextStyle(fontSize: 12),
-            ),
-            isThreeLine: true,
-          );
-        },
+      body: AppBg(
+        child: ListView.builder(
+          itemCount: pos.length,
+          itemBuilder: (c, i) {
+            final s = pos[i];
+            return ListTile(
+              leading: CircleAvatar(child: Text('${i + 1}')),
+              title: Text(
+                t.nombreEquipo(s.equipoId),
+                style: const TextStyle(
+                    fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text(
+                'PG:${s.pg}  PP:${s.pp}  PJ:${s.pj}\nSets ${s.sf}-${s.sc} (Dif ${s.difSets})  •  Pts ${s.pf}-${s.pc} (Dif ${s.difPuntos})',
+                style: const TextStyle(fontSize: 12),
+              ),
+              isThreeLine: true,
+            );
+          },
+        ),
       ),
     );
   }
@@ -111,27 +116,29 @@ class HistoryScreen extends StatelessWidget {
               onPressed: () => exportarHistorial(t))
         ],
       ),
-      body: t.resultados.isEmpty
-          ? const Center(child: Text('Sin partidos jugados.'))
-          : ListView.builder(
-              itemCount: t.resultados.length,
-              itemBuilder: (c, i) {
-                final r = t.resultados[i];
-                return Card(
-                  child: ListTile(
-                    title: Text(
-                        '${t.nombreEquipo(r.equipoAId)} ${r.setsA} - ${r.setsB} ${t.nombreEquipo(r.equipoBId)}'),
-                    subtitle: Text(
-                        'Ganador: ${t.nombreEquipo(r.ganadorId)}\nFecha: ${r.fecha.isEmpty ? '-' : r.fecha} • Lugar: ${r.lugar.isEmpty ? '-' : r.lugar}\nParciales: ${r.parciales.join(', ')}${r.sanciones.isNotEmpty ? '\nSanciones: ${r.sanciones.map((s) => s.tipo).join(', ')}' : ''}'),
-                    trailing: IconButton(
-                      tooltip: 'Exportar PDF del partido',
-                      icon: const Icon(Icons.picture_as_pdf),
-                      onPressed: () => exportarHojaPartido(t, r),
+      body: AppBg(
+        child: t.resultados.isEmpty
+            ? const Center(child: Text('Sin partidos jugados.'))
+            : ListView.builder(
+                itemCount: t.resultados.length,
+                itemBuilder: (c, i) {
+                  final r = t.resultados[i];
+                  return Card(
+                    child: ListTile(
+                      title: Text(
+                          '${t.nombreEquipo(r.equipoAId)} ${r.setsA} - ${r.setsB} ${t.nombreEquipo(r.equipoBId)}'),
+                      subtitle: Text(
+                          'Ganador: ${t.nombreEquipo(r.ganadorId)}\nFecha: ${r.fecha.isEmpty ? '-' : r.fecha} • Lugar: ${r.lugar.isEmpty ? '-' : r.lugar}\nParciales: ${r.parciales.join(', ')}${r.sanciones.isNotEmpty ? '\nSanciones: ${r.sanciones.map((s) => s.tipo).join(', ')}' : ''}'),
+                      trailing: IconButton(
+                        tooltip: 'Exportar PDF del partido',
+                        icon: const Icon(Icons.picture_as_pdf),
+                        onPressed: () => exportarHojaPartido(t, r),
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
+                  );
+                },
+              ),
+      ),
     );
   }
 }

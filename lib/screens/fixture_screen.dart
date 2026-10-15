@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../store.dart';
 import '../models.dart';
+import '../theme.dart';
 
 class FixtureScreen extends StatefulWidget {
   final String torneoId;
@@ -58,28 +59,30 @@ class _State extends State<FixtureScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Rol de juegos')),
-      body: ListView(
-        padding: const EdgeInsets.all(12),
-        children: [
-          TextField(
-            decoration: const InputDecoration(
-              labelText: 'Buscar partido por equipo',
-              prefixIcon: Icon(Icons.search),
-              border: OutlineInputBorder(),
+      body: AppBg(
+        child: ListView(
+          padding: const EdgeInsets.all(12),
+          children: [
+            TextField(
+              decoration: const InputDecoration(
+                labelText: 'Buscar partido por equipo',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (v) => setState(() => filtro = v),
             ),
-            onChanged: (v) => setState(() => filtro = v),
-          ),
-          const SizedBox(height: 8),
-          if (esRR2) ...[
-            lista(v1, 'Primera vuelta'),
-            lista(v2, 'Segunda vuelta'),
-            ..._extras(t, context, store, coincide),
-          ] else if (t.sistema == Sistema.eliminacionDirecta) ...[
-            ..._porRonda(t, context, store, coincide),
-          ] else ...[
-            lista(v1, 'Partidos generados'),
+            const SizedBox(height: 8),
+            if (esRR2) ...[
+              lista(v1, 'Primera vuelta'),
+              lista(v2, 'Segunda vuelta'),
+              ..._extras(t, context, store, coincide),
+            ] else if (t.sistema == Sistema.eliminacionDirecta) ...[
+              ..._porRonda(t, context, store, coincide),
+            ] else ...[
+              lista(v1, 'Partidos generados'),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

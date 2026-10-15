@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models.dart';
 import '../store.dart';
+import '../theme.dart';
 import 'teams_screen.dart';
 
 class EditTournamentScreen extends StatelessWidget {
@@ -45,9 +46,10 @@ class EditTournamentScreen extends StatelessWidget {
     final t = store.porId(torneoId)!;
     return Scaffold(
       appBar: AppBar(title: const Text('Editar torneo')),
-      body: ListView(
-        padding: const EdgeInsets.all(12),
-        children: [
+      body: AppBg(
+        child: ListView(
+          padding: const EdgeInsets.all(12),
+          children: [
           Card(
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -95,7 +97,8 @@ class EditTournamentScreen extends StatelessWidget {
               ),
             );
           }),
-        ],
+          ],
+        ),
       ),
     );
   }
