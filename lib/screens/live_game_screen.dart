@@ -630,19 +630,21 @@ class _State extends State<LiveGameScreen> {
     return acc.setsFB;
   }
 
-  /// (7) Marcador al doble (112) y números negros en negritas.
+  /// Marcador responsivo: números y botones se compactan en pantallas angostas.
   Widget _marcador(String teamId, int pts) {
     final paraA = teamId == widget.ladoAId;
     final tiempos = paraA ? tA : tB;
     final cambios = paraA ? subA.usadas : subB.usadas;
+    final angosto = MediaQuery.sizeOf(context).width < 420;
     return Column(
       children: [
         Text(_nombre(teamId),
             textAlign: TextAlign.center,
             style: const TextStyle(fontWeight: FontWeight.bold)),
         Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+          padding: EdgeInsets.symmetric(
+              horizontal: angosto ? 12 : 18,
+              vertical: angosto ? 2 : 6),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(18),
@@ -651,8 +653,8 @@ class _State extends State<LiveGameScreen> {
           child: FittedBox(
             fit: BoxFit.scaleDown,
             child: Text('$pts',
-                style: const TextStyle(
-                    fontSize: 112,
+                style: TextStyle(
+                    fontSize: angosto ? 76 : 112,
                     fontWeight: FontWeight.w900,
                     color: Colors.black)),
           ),
@@ -662,24 +664,34 @@ class _State extends State<LiveGameScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: angosto ? 10 : 16,
+                        vertical: angosto ? 8 : 12)),
                 onPressed: () => _punto(paraA),
-                child: const Text('+1',
-                    style: TextStyle(fontSize: 20))),
+                child: Text('+1',
+                    style:
+                        TextStyle(fontSize: angosto ? 16 : 20))),
             const SizedBox(width: 8),
             OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: angosto ? 10 : 16,
+                        vertical: angosto ? 8 : 12)),
                 onPressed: () => _punto(paraA, resta: true),
                 child: const Text('-1')),
           ],
         ),
         const SizedBox(height: 4),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 8,
+          runSpacing: 6,
           children: [
             ElevatedButton(
               onPressed: () => _pedirTiempo(paraA),
               child: Text('Tiempo ($tiempos/2)'),
             ),
-            const SizedBox(width: 8),
             ElevatedButton(
               onPressed: () => _dialogoCambio(paraA),
               child: Text('Cambio ($cambios/6)'),
@@ -721,21 +733,28 @@ class _State extends State<LiveGameScreen> {
   /// Cancha naranja con líneas blancas, red negra y línea de ataque
   /// a 1/3 de la red hacia la zona zaguera (separa delanteros/zagueros).
   Widget _cancha() {
+    // Medidas responsivas para que no se empalme en celulares angostos.
+    final angosto = MediaQuery.sizeOf(context).width < 420;
+    final double cell = angosto ? 54 : 72;
+    final double marg = angosto ? 6 : 12;
+    final double backW = angosto ? 150 : 220;
+    final double frontW = angosto ? 84 : 110;
+    final double netH = 3 * (cell + marg * 2) + 60;
     Widget celda(String id, bool conSaque) {
       final num = _numeroJug(id)?.toString() ?? '?';
       return Container(
-        width: 72,
-        height: 72,
-        margin: const EdgeInsets.all(12),
+        width: cell,
+        height: cell,
+        margin: EdgeInsets.all(marg),
         decoration: BoxDecoration(
           color: conSaque ? Colors.yellow : Colors.white,
           border: Border.all(color: Colors.black, width: 2),
-          borderRadius: BorderRadius.circular(36),
+          borderRadius: BorderRadius.circular(cell / 2),
         ),
         child: Center(
             child: Text(num,
-                style: const TextStyle(
-                    fontSize: 30,
+                style: TextStyle(
+                    fontSize: angosto ? 24 : 30,
                     fontWeight: FontWeight.w900,
                     color: Colors.black))),
       );
@@ -778,13 +797,13 @@ class _State extends State<LiveGameScreen> {
                     fontWeight: FontWeight.bold, color: Colors.white)),
             Row(children: [
               SizedBox(
-                  width: 220,
+                  width: backW,
                   child: Center(
                       child:
                           colAtras(teamId, [pos[4], pos[5], pos[0]]))),
               lineaAtaque(),
               SizedBox(
-                  width: 110,
+                  width: frontW,
                   child: Center(
                       child:
                           colDelante(teamId, [pos[3], pos[2], pos[1]]))),
@@ -810,13 +829,13 @@ class _State extends State<LiveGameScreen> {
                     fontWeight: FontWeight.bold, color: Colors.white)),
             Row(children: [
               SizedBox(
-                  width: 110,
+                  width: frontW,
                   child: Center(
                       child:
                           colDelante(teamId, [pos[1], pos[2], pos[3]]))),
               lineaAtaque(),
               SizedBox(
-                  width: 220,
+                  width: backW,
                   child: Center(
                       child:
                           colAtras(teamId, [pos[0], pos[5], pos[4]]))),
@@ -845,7 +864,7 @@ class _State extends State<LiveGameScreen> {
                   children: [
                     mitadIzq(idIzq),
                     Container(
-                        width: 10, height: 340, color: Colors.black),
+                        width: 10, height: netH, color: Colors.black),
                     mitadDer(idDer),
                   ],
                 ),

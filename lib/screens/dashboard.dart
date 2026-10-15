@@ -77,7 +77,7 @@ class DashboardScreen extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                      '${t.equipos.length} equipos • ${t.resultados.length} partidos jugados',
+                      '${t.equipos.length} equipos • ${t.resultados.length} partidos jugados\nVersión $kAppVersion',
                       style: const TextStyle(
                           color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
@@ -98,91 +98,111 @@ class DashboardScreen extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.all(16),
-              gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 0.72,
-              ),
-              itemCount: items.length,
-              itemBuilder: (c, i) {
-                final it = items[i];
-                return InkWell(
-                  borderRadius: BorderRadius.circular(22),
-                  onTap: it.fn,
-                  child: Ink(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                          colors: it.grad,
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight),
+            child: LayoutBuilder(
+              builder: (ctx, cons) {
+                // Columnas según el ancho: 2 en celular, más en pantallas grandes.
+                final cols =
+                    (cons.maxWidth ~/ 240).clamp(2, 4).toInt();
+                return GridView.builder(
+                  padding: const EdgeInsets.all(16),
+                  gridDelegate:
+                      SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: cols,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: cols > 2 ? 0.85 : 0.72,
+                  ),
+                  itemCount: items.length,
+                  itemBuilder: (c, i) {
+                    final it = items[i];
+                    return Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                        colors: it.grad,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight),
+                    borderRadius: BorderRadius.circular(22),
+                    boxShadow: [
+                      BoxShadow(
+                        color: it.grad.last.withValues(alpha: 0.4),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(22),
+                    child: InkWell(
                       borderRadius: BorderRadius.circular(22),
-                      boxShadow: [
-                        BoxShadow(
-                          color: it.grad.last.withValues(alpha: 0.4),
-                          blurRadius: 12,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color:
-                                Colors.white.withValues(alpha: 0.25),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Icon(it.icon,
-                              color: Colors.white, size: 26),
-                        ),
-                        const SizedBox(height: 6),
-                        Center(
-                          child: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Colors.black
-                                  .withValues(alpha: 0.30),
-                              borderRadius:
-                                  BorderRadius.circular(20),
-                            ),
-                            child: ClipRRect(
-                              borderRadius:
-                                  BorderRadius.circular(12),
-                              child: Image.asset(it.imagen,
-                                  width: 88,
-                                  height: 88,
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (_, __, ___) =>
-                                      const SizedBox(
-                                          width: 88, height: 88)),
-                            ),
-                          ),
-                        ),
-                        const Spacer(),
-                        Text(it.titulo,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold)),
-                        Text(it.sub,
-                            style: TextStyle(
+                      onTap: it.fn,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding:
+                                  const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
                                 color: Colors.white
-                                    .withValues(alpha: 0.85),
-                                fontSize: 12)),
-                      ],
+                                    .withValues(alpha: 0.25),
+                                borderRadius:
+                                    BorderRadius.circular(14),
+                              ),
+                              child: Icon(it.icon,
+                                  color: Colors.white, size: 26),
+                            ),
+                            const SizedBox(height: 6),
+                            Center(
+                              child: Container(
+                                padding:
+                                    const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.black
+                                      .withValues(alpha: 0.30),
+                                  borderRadius:
+                                      BorderRadius.circular(20),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius:
+                                      BorderRadius.circular(12),
+                                  child: Image.asset(it.imagen,
+                                      width: 88,
+                                      height: 88,
+                                      fit: BoxFit.contain,
+                                      errorBuilder: (_, __,
+                                              ___) =>
+                                          const SizedBox(
+                                              width: 88,
+                                              height: 88)),
+                                ),
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(it.titulo,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight:
+                                        FontWeight.bold)),
+                            Text(it.sub,
+                                style: TextStyle(
+                                    color: Colors.white.withValues(
+                                        alpha: 0.85),
+                                    fontSize: 12)),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 );
               },
-            ),
-          ),
+            );
+          },
+        ),
+        ),
         ],
         ),
       ),

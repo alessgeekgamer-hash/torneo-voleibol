@@ -81,31 +81,41 @@ class JornadaScreen extends StatelessWidget {
                 final m = partidos[i];
                 final pausa = store.pausaDe(torneoId, m.id);
                 return Card(
-                  child: ListTile(
-                    title: Text(
-                        '${t.nombreEquipo(m.equipoAId)} vs ${t.nombreEquipo(m.equipoBId)}',
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text(
-                        '${m.etiqueta}${m.fecha.isNotEmpty ? '\nFecha: ${m.fecha}' : ''}${m.lugar.isNotEmpty ? '\nLugar: ${m.lugar}' : ''}${pausa != null ? '\nSuspendido en set ${pausa.setNumero} (${pausa.pA}-${pausa.pB})' : ''}'),
-                    isThreeLine: true,
-                    trailing: Column(
-                      mainAxisSize: MainAxisSize.min,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ElevatedButton(
-                          child: const Text('Iniciar encuentro'),
-                          onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => RosterScreen(
-                                      torneoId: torneoId,
-                                      matchId: m.id))),
+                        Text(
+                            '${t.nombreEquipo(m.equipoAId)} vs ${t.nombreEquipo(m.equipoBId)}',
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
+                        Text(
+                            '${m.etiqueta}${m.fecha.isNotEmpty ? '\nFecha: ${m.fecha}' : ''}${m.lugar.isNotEmpty ? '\nLugar: ${m.lugar}' : ''}${pausa != null ? '\nSuspendido en set ${pausa.setNumero} (${pausa.pA}-${pausa.pB})' : ''}'),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: [
+                            ElevatedButton(
+                              child: const Text('Iniciar encuentro'),
+                              onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => RosterScreen(
+                                          torneoId: torneoId,
+                                          matchId: m.id))),
+                            ),
+                            if (pausa != null)
+                              OutlinedButton(
+                                child:
+                                    const Text('Continuar encuentro'),
+                                onPressed: () =>
+                                    _preguntarContinuar(
+                                        context, store, pausa),
+                              ),
+                          ],
                         ),
-                        if (pausa != null)
-                          TextButton(
-                            child: const Text('Continuar encuentro'),
-                            onPressed: () => _preguntarContinuar(
-                                context, store, pausa),
-                          ),
                       ],
                     ),
                   ),

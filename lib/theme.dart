@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
-class VoleyColors {
-  static const navy = Color(0xFF0B1E3B);
+/// Versión visible en la app para confirmar qué compilación se ejecuta.
+const String kAppVersion = '1.0.2+3';
+
+class VoleyColors {  static const navy = Color(0xFF0B1E3B);
   static const teal = Color(0xFF00BFA6);
   static const orange = Color(0xFFFF6F00);
   static const yellow = Color(0xFFFFC107);
@@ -89,10 +91,9 @@ class GradientButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Opacity(
       opacity: onPressed == null ? 0.5 : 1,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+      child: GestureDetector(
         onTap: onPressed,
-        child: Ink(
+        child: Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             gradient: LinearGradient(colors: gradient),

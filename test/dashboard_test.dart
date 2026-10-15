@@ -43,11 +43,13 @@ void main() {
       // de pantalla hasta hacer scroll.
       expect(find.text(label, skipOffstage: false), findsOneWidget);
     }
-    // Recuadros con degradado presentes (uno por apartado).
-    final inks = tester
-        .widgetList<Ink>(find.byType(Ink))
-        .where((w) => w.decoration is BoxDecoration)
+    // Recuadros con degradado presentes (uno por apartado + banner).
+    final cajas = tester
+        .widgetList<Container>(find.byType(Container))
+        .where((w) =>
+            w.decoration is BoxDecoration &&
+            (w.decoration as BoxDecoration).gradient is LinearGradient)
         .toList();
-    expect(inks.length, greaterThanOrEqualTo(7));
+    expect(cajas.length, greaterThanOrEqualTo(7));
   });
 }

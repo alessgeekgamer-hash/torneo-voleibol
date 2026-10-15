@@ -163,6 +163,12 @@ class HomeScreen extends StatelessWidget {
                     },
                   ),
           ),
+          const Padding(
+            padding: EdgeInsets.only(bottom: 6),
+            child: Text('Versión $kAppVersion',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 11, color: Colors.grey)),
+          ),
         ],
         ),
       ),
@@ -244,10 +250,9 @@ class _ThemeBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
-    return InkWell(
-      borderRadius: BorderRadius.circular(20),
+    return GestureDetector(
       onTap: () => store.toggleOscuro(),
-      child: Ink(
+      child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: LinearGradient(colors: store.oscuro
