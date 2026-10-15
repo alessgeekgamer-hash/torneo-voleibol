@@ -5,6 +5,7 @@ import '../models.dart';
 import '../theme.dart';
 import 'tournament_form.dart';
 import 'dashboard.dart';
+import 'server_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -40,6 +41,19 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(width: 10),
                 _ThemeBtn(),
               ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+            child: GradientButton(
+              icon: Icons.vpn_lock,
+              label: 'Ver en red',
+              subtitle: 'Descargar torneo de otro equipo • Tailscale',
+              gradient: const [Color(0xFF0B1E3B), Color(0xFF00BFA6)],
+              onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const ServerScreen())),
             ),
           ),
           Padding(
