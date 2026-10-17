@@ -19,6 +19,19 @@ bool ganaSet(int a, int b, int setNum, Formato f) {
 
 bool puedePedirTiempo(int usados) => usados < 2;
 
+/// FIVB: el saque inicial alterna entre sets. El equipo que abrió el saque
+/// en un set NO lo abre en el siguiente (le toca al otro).
+String saqueDelSiguienteSet(
+    String saqueInicioSet, String ladoAId, String ladoBId) {
+  if (saqueInicioSet != ladoAId && saqueInicioSet != ladoBId) {
+    return ladoAId; // dato faltante/extraño: no cambia nada.
+  }
+  return saqueInicioSet == ladoAId ? ladoBId : ladoAId;
+}
+
+/// FIVB: los equipos cambian de lado después de cada set.
+bool ladoDelSiguienteSet(bool ladoInvertido) => !ladoInvertido;
+
 class ControlSustituciones {
   ControlSustituciones();
   int usadas = 0;

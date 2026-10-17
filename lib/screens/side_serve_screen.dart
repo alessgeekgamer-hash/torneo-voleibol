@@ -9,12 +9,15 @@ class SideServeScreen extends StatefulWidget {
   final String matchId;
   final int setNumero;
   final bool esDefinitivo;
+  /// Lado heredado del set anterior (true = lado A a la derecha).
+  final bool invertido;
   const SideServeScreen(
       {super.key,
       required this.torneoId,
       required this.matchId,
       this.setNumero = 1,
-      this.esDefinitivo = false});
+      this.esDefinitivo = false,
+      this.invertido = false});
 
   @override
   State<SideServeScreen> createState() => _State();
@@ -50,6 +53,14 @@ class _State extends State<SideServeScreen> {
                           'Set definitivo: elige de nuevo lado y saque inicial. A los 8 puntos se cambiará de lado automáticamente.'))),
             const Text('¿Quién es el equipo del lado A?',
                 style: TextStyle(fontWeight: FontWeight.bold)),
+            if (widget.setNumero > 1)
+              Padding(
+                padding: const EdgeInsets.only(left: 12, bottom: 4),
+                child: Text(
+                    'En este set el lado A queda a la ${widget.invertido ? 'derecha' : 'izquierda'} (cambian de lado respecto al set anterior).',
+                    style:
+                        const TextStyle(fontSize: 12, color: Colors.grey)),
+              ),
             ...ids.map((id) => RadioListTile<String>(
                   title: Text(t.nombreEquipo(id)),
                   value: id,
@@ -84,6 +95,7 @@ class _State extends State<SideServeScreen> {
                                 ladoBId: ladoBId,
                                 saqueId: saqueId!,
                                 setNumero: widget.setNumero,
+                                invertido: widget.invertido,
                               )));
                 },
               ),

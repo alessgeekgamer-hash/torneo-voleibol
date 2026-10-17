@@ -37,6 +37,9 @@ class LiveGameScreen extends StatefulWidget {
   /// true cuando se reanuda con alineación editada: el marcador y los
   /// sets se conservan pero los cambios se reinician desde [lineupA/B].
   final bool reanudaConNuevaAlineacion;
+  /// Lado con el que arranca este set (true = lado A a la derecha).
+  /// Los equipos cambian de lado al finalizar cada set (FIVB).
+  final bool ladoInicialInvertido;
   const LiveGameScreen(
       {super.key,
       required this.torneoId,
@@ -50,7 +53,8 @@ class LiveGameScreen extends StatefulWidget {
       this.prevA,
       this.prevB,
       this.pausaInicial,
-      this.reanudaConNuevaAlineacion = false});
+      this.reanudaConNuevaAlineacion = false,
+      this.ladoInicialInvertido = false});
 
   factory LiveGameScreen.desdePausa({required PausaPartido pausa}) =>
       LiveGameScreen(
@@ -93,6 +97,8 @@ class _State extends State<LiveGameScreen> {
   late List<String> posA; // idx0=pos1
   late List<String> posB;
   late String saca; // teamId con saque
+  /// Quién abrió el saque en este set (para alternar en el siguiente).
+  late String sacaInicioSet;
   int pA = 0, pB = 0;
   int tA = 0, tB = 0; // tiempos usados en el set
   late ControlSustituciones subA, subB;
@@ -120,6 +126,9 @@ class _State extends State<LiveGameScreen> {
           ? List<String>.from(widget.lineupB)
           : List<String>.from(pausa.posB);
       saca = pausa.sacaId;
+      // Quién abrió el saque de este set (para alternar el siguiente).
+      sacaInicioSet =
+          pausa.saqueOrig.isNotEmpty ? pausa.saqueOrig : pausa.sacaId;
       pA = pausa.pA;
       pB = pausa.pB;
       tA = pausa.tA;
@@ -177,6 +186,8 @@ class _State extends State<LiveGameScreen> {
     posA = List<String>.from(widget.lineupA);
     posB = List<String>.from(widget.lineupB);
     saca = widget.saqueId;
+    sacaInicioSet = widget.saqueId;
+    ladoInvertido = widget.ladoInicialInvertido;
     subA = ControlSustituciones();
     subB = ControlSustituciones();
     titA = posA.toSet();
@@ -185,7 +196,12 @@ class _State extends State<LiveGameScreen> {
       // Inicio desde cero (roster): descarta acumulados/pausa viejos
       // del mismo partido para no arrastrar otro encuentro.
       LiveGameScreen.sesiones[_key] = _Acc();
-      context.read<AppStore>().borrarPausa(widget.torneoId, widget.matchId);
+      // Se hace al terminar el frame: notificar la store durante el build
+      // inicial provoca "setState during build".
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        context.read<AppStore>().borrarPausa(widget.torneoId, widget.matchId);
+      });
     }
     // registrar jugadores que participan
     final fixA = _fixture().equipoAId;
@@ -346,6 +362,11 @@ class _State extends State<LiveGameScreen> {
     } else {
       final next = widget.setNumero + 1;
       final esDef = esSetDefinitivo(next, f);
+      // FIVB: entre sets cambian de lado y el saque inicial alterna
+      // (el que abrió el set anterior no abre el siguiente).
+      final proximoSaque =
+          saqueDelSiguienteSet(sacaInicioSet, widget.ladoAId, widget.ladoBId);
+      final proximoInvertido = ladoDelSiguienteSet(ladoInvertido);
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -353,7 +374,10 @@ class _State extends State<LiveGameScreen> {
           title: Text('Set ${widget.setNumero} terminado $pA-$pB'),
           content: Text(esDef
               ? 'Vamos al set definitivo. Elige lado y saque.'
-              : 'Continúa a la alineación del set $next.'),
+              : 'Continúa la alineación del set $next.\n'
+                  'Saca ${_nombre(proximoSaque)} (saque alternado) y '
+                  'cambian de lado: ${_nombre(proximoInvertido ? widget.ladoAId : widget.ladoBId)} a la derecha, '
+                  '${_nombre(proximoInvertido ? widget.ladoBId : widget.ladoAId)} a la izquierda.'),
           actions: [
             TextButton(
               onPressed: () {
@@ -366,7 +390,8 @@ class _State extends State<LiveGameScreen> {
                               torneoId: widget.torneoId,
                               matchId: widget.matchId,
                               setNumero: next,
-                              esDefinitivo: true)));
+                              esDefinitivo: true,
+                              invertido: proximoInvertido)));
                 } else {
                   Navigator.pushReplacement(
                       context,
@@ -376,8 +401,9 @@ class _State extends State<LiveGameScreen> {
                                 matchId: widget.matchId,
                                 ladoAId: widget.ladoAId,
                                 ladoBId: widget.ladoBId,
-                                saqueId: saca,
+                                saqueId: proximoSaque,
                                 setNumero: next,
+                                invertido: proximoInvertido,
                               )));
                 }
               },
@@ -529,7 +555,7 @@ class _State extends State<LiveGameScreen> {
       accCambiosB: List<int>.from(acc.cambiosFB),
       ladoAOrig: widget.ladoAId,
       ladoBOrig: widget.ladoBId,
-      saqueOrig: widget.saqueId,
+      saqueOrig: sacaInicioSet,
       titA: titA.toList(),
       titB: titB.toList(),
     );

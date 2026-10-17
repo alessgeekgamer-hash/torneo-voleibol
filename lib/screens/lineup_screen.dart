@@ -18,6 +18,8 @@ class LineupScreen extends StatefulWidget {
   final List<String>? prevA;
   final List<String>? prevB;
   final PausaPartido? pausa;
+  /// Lado invertido con el que entra el set (true = lado A a la derecha).
+  final bool invertido;
   const LineupScreen(
       {super.key,
       required this.torneoId,
@@ -28,7 +30,8 @@ class LineupScreen extends StatefulWidget {
       required this.setNumero,
       this.prevA,
       this.prevB,
-      this.pausa});
+      this.pausa,
+      this.invertido = false});
 
   @override
   State<LineupScreen> createState() => _State();
@@ -118,6 +121,15 @@ class _State extends State<LineupScreen> {
           Text(
               'Arriba: ${eqArriba.nombre} (saque) • Abajo: ${eqAbajo.nombre} (recibe)',
               style: const TextStyle(fontWeight: FontWeight.bold)),
+          Builder(builder: (_) {
+            final inv = widget.pausa?.ladoInvertido ?? widget.invertido;
+            final izq = inv ? widget.ladoBId : widget.ladoAId;
+            final der = inv ? widget.ladoAId : widget.ladoBId;
+            return Text(
+                'Lados: ${t.nombreEquipo(izq)} a la izquierda • '
+                '${t.nombreEquipo(der)} a la derecha',
+                style: const TextStyle(fontSize: 12, color: Colors.grey));
+          }),
           const SizedBox(height: 8),
           MaxWidth(
               child: _bloque(
@@ -177,6 +189,7 @@ class _State extends State<LineupScreen> {
                             lineupB: linB.cast<String>(),
                             prevA: widget.prevA,
                             prevB: widget.prevB,
+                            ladoInicialInvertido: widget.invertido,
                           )));
             },
             child: const Text('Continuar al juego'),

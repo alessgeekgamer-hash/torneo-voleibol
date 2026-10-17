@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// Versión visible en la app para confirmar qué compilación se ejecuta.
-const String kAppVersion = '1.0.2+3';
+const String kAppVersion = '1.0.3+4';
 
 class VoleyColors {  static const navy = Color(0xFF0B1E3B);
   static const teal = Color(0xFF00BFA6);

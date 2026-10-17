@@ -290,8 +290,6 @@ class AppStore extends ChangeNotifier {
     return u.replaceAll(RegExp(r'/+$'), '');
   }
 
-  String _base(String b) => normalizarUrl(b);
-
   Future<Map<String, dynamic>> _getJson(String url) async {
     final client = HttpClient();
     client.connectionTimeout = const Duration(seconds: 10);
